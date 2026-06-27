@@ -389,18 +389,20 @@
 
   .project:hover .project-img { transform: translateY(-4px); }
 
-  .project-block {
+  .project-logo {
     display: flex;
     align-items: center;
     justify-content: center;
-    text-align: center;
-    background: var(--accent);
-    color: var(--mint);
-    padding: 24px;
-    font-family: 'Fraunces', Georgia, serif;
-    font-weight: 600;
-    font-size: 28px;
-    letter-spacing: 0.14em;
+    background: var(--paper);
+    padding: 36px;
+  }
+
+  .project-logo img {
+    width: 100%;
+    height: auto;
+    max-height: 100%;
+    object-fit: contain;
+    filter: none;
   }
 
   .project-meta {
@@ -777,7 +779,7 @@
         <p>Technical seat on a four-person team driving the U.S. expansion of VOINOSIS, a Korean healthcare-AI startup whose engine screens for early cognitive decline from 2 to 3 minutes of speech using acoustic (non-language) analysis. I mapped the U.S. competitive landscape and profiled the closest voice-based rival to sharpen positioning, contributed HIPAA and data-compliance recommendations for a Mount Sinai clinical pilot, and am building a U.S. hiring plan for entry-level technical roles covering sourcing, compensation, and visa pathways.</p>
         <a class="project-link" href="#contact">Ask me about it →</a>
       </div>
-      <div class="project-img project-block" aria-label="VOINOSIS">VOINOSIS</div>
+      <div class="project-img project-logo"><img src="images/voinosis-logo.png" alt="VOINOSIS logo"></div>
     </div>
 
     <div class="project">
