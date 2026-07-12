@@ -64,6 +64,18 @@ a { color: inherit; }
   border-radius: 2px;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 .skip-link {
   position: absolute;
   left: -9999px;
@@ -528,14 +540,17 @@ main section {
   justify-content: center;
 }
 
+/* Width comes from the HTML width attribute so the box (and its
+   aspect ratio) is reserved before the lazy image loads — no layout shift */
 .figure-portrait img {
-  width: auto;
   max-width: 100%;
-  max-height: 430px;
+  height: auto;
   display: block;
   filter: saturate(0.95);
   box-shadow: 0 1px 2px rgba(31, 42, 36, 0.14), 0 14px 28px -18px rgba(31, 42, 36, 0.35);
 }
+
+.figure-portrait img.plate-tall { max-width: min(100%, 236px); }
 
 .figure-plate {
   display: flex;
@@ -842,8 +857,8 @@ footer .made-with {
     animation: line-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  .js-motion .hero h1 .h1-mask:first-of-type .h1-line { animation-delay: 0.22s; }
-  .js-motion .hero h1 .h1-mask:last-of-type .h1-line { animation-delay: 0.4s; }
+  .js-motion .hero h1 .h1-line { animation-delay: 0.22s; }
+  .js-motion .hero h1 .h1-mask + .h1-mask .h1-line { animation-delay: 0.4s; }
 
   .js-motion .squiggle path {
     stroke-dasharray: 205;
