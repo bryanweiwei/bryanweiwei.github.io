@@ -10,8 +10,18 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<script>
+  // Set before first paint so load-choreography styles only apply when JS + motion are available.
+  document.documentElement.classList.add('js');
+  if (matchMedia('(prefers-reduced-motion: no-preference)').matches) {
+    document.documentElement.classList.add('js-motion');
+  }
+</script>
+<script src="script.js" defer></script>
 </head>
 <body>
+
+<div class="scroll-progress" aria-hidden="true"></div>
 
 <a class="skip-link" href="#main">Skip to content</a>
 
@@ -32,9 +42,9 @@
 
   <header class="hero" id="top">
     <p class="hero-eyebrow">Bryan Wei · NYU Stern '29</p>
-    <h1>
-      <span class="h1-line">Building things</span>
-      <span class="h1-line h1-line-2">in the age of <em><span class="underlined">AI</span></em>.</span>
+    <h1 aria-label="Building things in the age of AI.">
+      <span class="h1-mask" aria-hidden="true"><span class="h1-line">Building things</span></span>
+      <span class="h1-mask" aria-hidden="true"><span class="h1-line h1-line-2">in the age of <em><span class="underlined">AI<svg class="squiggle" viewBox="0 0 200 14" preserveAspectRatio="none" focusable="false" aria-hidden="true"><path d="M2,8 Q50,2 100,7 T198,6"/></svg></span></em>.</span></span>
     </h1>
     <div class="hero-foot">
       <div class="hero-meta">
@@ -55,17 +65,17 @@
 <div class="container">
 
   <section id="about" aria-labelledby="about-title">
-    <div class="section-header">
+    <div class="section-header reveal">
       <span class="section-num" aria-hidden="true">i.</span>
       <h2 id="about-title">A little <em>about me.</em></h2>
     </div>
     <div class="about-grid">
-      <div class="about-text">
+      <div class="about-text reveal">
         <p>I'm Bryan, originally from Taipei and now in New York studying Business, Technology, and Entrepreneurship at NYU Stern. I grew up around technology that genuinely changes how people live and work, and that proximity shaped how I think about what's worth building.</p>
         <p>Right now I build at the intersection of business and AI: what it actually takes to turn a model into a tool people rely on, and how businesses adapt when the underlying assumptions shift. I've been getting that experience hands-on, working the technical seat on a healthcare-AI startup's U.S. expansion, shaping service offerings at a healthcare consulting startup, running B2B outreach at a recruiting platform, and competing in case work that's landed in front of teams at companies like Salesforce.</p>
         <p>I'm most drawn to tech, startups, and venture, with product still on the table. If you're working on something interesting, I'd love to hear about it.</p>
       </div>
-      <aside class="about-aside">
+      <aside class="about-aside reveal">
         <h3>Currently</h3>
         <ul>
           <li>School <span>NYU Stern</span></li>
@@ -79,12 +89,12 @@
   </section>
 
   <section id="projects" aria-labelledby="projects-title">
-    <div class="section-header">
+    <div class="section-header reveal">
       <span class="section-num" aria-hidden="true">ii.</span>
       <h2 id="projects-title">Selected <em>work.</em></h2>
     </div>
 
-    <article class="project">
+    <article class="project reveal">
       <div class="project-num" aria-hidden="true">01</div>
       <div class="project-content">
         <p class="project-meta">Technical Fellow · NYU Stern AIIA Technical Fellowship</p>
@@ -97,7 +107,7 @@
       </a>
     </article>
 
-    <article class="project">
+    <article class="project reveal">
       <div class="project-num" aria-hidden="true">02</div>
       <div class="project-content">
         <p class="project-meta">Case Competition · Salesforce</p>
@@ -110,7 +120,7 @@
       </figure>
     </article>
 
-    <article class="project">
+    <article class="project reveal">
       <div class="project-num" aria-hidden="true">03</div>
       <div class="project-content">
         <p class="project-meta">Product Manager · Empire Health Labs</p>
@@ -123,7 +133,7 @@
       </figure>
     </article>
 
-    <article class="project">
+    <article class="project reveal">
       <div class="project-num" aria-hidden="true">04</div>
       <div class="project-content">
         <p class="project-meta">B2B Growth · Velric</p>
@@ -136,7 +146,7 @@
       </figure>
     </article>
 
-    <article class="project">
+    <article class="project reveal">
       <div class="project-num" aria-hidden="true">05</div>
       <div class="project-content">
         <p class="project-meta">In Development · NYU</p>
@@ -151,13 +161,13 @@
   </section>
 
   <section id="skills" aria-labelledby="skills-title">
-    <div class="section-header">
+    <div class="section-header reveal">
       <span class="section-num" aria-hidden="true">iii.</span>
       <h2 id="skills-title">What I bring <em>to a team.</em></h2>
     </div>
-    <p class="skills-intro">A mix of product instinct, business development chops, and enough technical fluency to actually build the thing.</p>
+    <p class="skills-intro reveal">A mix of product instinct, business development chops, and enough technical fluency to actually build the thing.</p>
     <div class="skills-grid">
-      <div class="skill-group">
+      <div class="skill-group reveal">
         <h3><span class="num" aria-hidden="true">01</span> Product &amp; Strategy</h3>
         <ul>
           <li>Product thinking</li>
@@ -166,7 +176,7 @@
           <li>Roadmap scoping</li>
         </ul>
       </div>
-      <div class="skill-group">
+      <div class="skill-group reveal">
         <h3><span class="num" aria-hidden="true">02</span> Business Development</h3>
         <ul>
           <li>B2B outreach</li>
@@ -175,7 +185,7 @@
           <li>LinkedIn growth</li>
         </ul>
       </div>
-      <div class="skill-group">
+      <div class="skill-group reveal">
         <h3><span class="num" aria-hidden="true">03</span> Technical</h3>
         <ul>
           <li>Python</li>
@@ -185,7 +195,7 @@
           <li>Rapid prototyping</li>
         </ul>
       </div>
-      <div class="skill-group">
+      <div class="skill-group reveal">
         <h3><span class="num" aria-hidden="true">04</span> Languages</h3>
         <ul>
           <li>English (fluent)</li>
@@ -199,7 +209,7 @@
 
   <section id="contact" aria-labelledby="contact-title" class="contact-band">
     <div class="container">
-      <div class="contact-inner">
+      <div class="contact-inner reveal">
         <p class="contact-eyebrow"><span class="section-num" aria-hidden="true">iv.</span> — let's talk —</p>
         <h2 id="contact-title">Working on something <em>interesting?</em></h2>
         <p>I'm most drawn to tech, startups, and venture, and I always have time for a coffee with someone building something good.</p>

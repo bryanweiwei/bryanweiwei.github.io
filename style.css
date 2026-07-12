@@ -157,6 +157,12 @@ nav {
 
 .nav-links a:hover { color: var(--accent); }
 
+.nav-links a:hover::after,
+.nav-links a:focus-visible::after {
+  transform: scaleX(1);
+  transform-origin: left center;
+}
+
 @media (min-width: 768px) {
   .nav-links { gap: 30px; }
   .nav-links a { font-size: 14px; }
@@ -199,6 +205,14 @@ nav {
   font-variation-settings: 'opsz' 144;
 }
 
+/* Line masks give descenders room while allowing overflow-hidden reveals */
+.hero h1 .h1-mask {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.14em;
+  margin-bottom: -0.14em;
+}
+
 .hero h1 .h1-line { display: block; }
 
 .hero h1 .h1-line-2 { padding-left: clamp(0.35em, 5vw, 1.1em); }
@@ -208,16 +222,21 @@ nav {
   display: inline-block;
 }
 
-.hero h1 .underlined::after {
-  content: "";
+.squiggle {
   position: absolute;
   left: -4%;
-  bottom: -0.08em;
+  bottom: -0.06em;
   width: 108%;
   height: 0.16em;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 14' preserveAspectRatio='none'><path d='M2,8 Q50,2 100,7 T198,6' stroke='%233d7a52' stroke-width='2.5' fill='none' stroke-linecap='round'/></svg>");
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
+  overflow: visible;
+}
+
+.squiggle path {
+  fill: none;
+  stroke: var(--accent-bright);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
 }
 
 .hero-foot {
@@ -738,5 +757,170 @@ footer .made-with {
     flex-direction: row;
     justify-content: space-between;
     text-align: left;
+  }
+}
+
+/* ============================================================
+   10. Motion layer
+   Everything below is progressive enhancement. With reduced
+   motion, without JS, or in older browsers the page renders
+   complete and static — no content is gated on animation.
+   ============================================================ */
+
+/* Reading progress hairline (invisible until animated) */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  z-index: 60;
+  pointer-events: none;
+}
+
+.figure-wide { overflow: hidden; }
+
+@media (prefers-reduced-motion: no-preference) {
+
+  /* ----- Micro-interactions ----- */
+
+  .nav-links a {
+    transition: color 0.2s ease,
+                transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .nav-links a::after {
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .arrow-link,
+  .project-link {
+    transition: gap 0.3s cubic-bezier(0.22, 1, 0.36, 1), color 0.2s ease;
+  }
+
+  .arrow-link:hover,
+  .project-link:hover { gap: 14px; }
+
+  .project-figure {
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+                border-color 0.3s ease;
+  }
+
+  .project:hover .project-figure { transform: translateY(-5px); }
+
+  .figure-plate:hover { border-color: var(--accent); }
+
+  .figure-wide img,
+  .figure-portrait img { transition: filter 0.4s ease; }
+
+  .project:hover .figure-wide img,
+  .project:hover .figure-portrait img { filter: saturate(1); }
+
+  .btn {
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+                background-color 0.25s ease, border-color 0.25s ease,
+                color 0.25s ease;
+  }
+
+  .btn:hover { transform: translateY(-2px); }
+
+  /* Signature: hero letters swell near the cursor (set from JS) */
+  .hero h1 .ch {
+    transition: font-variation-settings 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* ----- Page-load choreography (only when JS confirmed motion) ----- */
+
+  .js-motion .hero-eyebrow {
+    animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both;
+  }
+
+  .js-motion .hero h1 .h1-line {
+    animation: line-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .js-motion .hero h1 .h1-mask:first-of-type .h1-line { animation-delay: 0.22s; }
+  .js-motion .hero h1 .h1-mask:last-of-type .h1-line { animation-delay: 0.4s; }
+
+  .js-motion .squiggle path {
+    stroke-dasharray: 205;
+    stroke-dashoffset: 205;
+    animation: draw-line 0.65s ease-out 1.15s forwards;
+  }
+
+  .js-motion .hero-foot {
+    animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.75s both;
+  }
+
+  /* ----- Scroll-driven storytelling ----- */
+  /* Modern path: CSS scroll-driven animations, scrubbed by scroll */
+
+  @supports (animation-timeline: view()) {
+    .js-motion .reveal {
+      animation: reveal-up linear both;
+      animation-timeline: view();
+      animation-range: entry 8% entry 48%;
+    }
+
+    .js-motion .figure-wide img {
+      animation: parallax linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 100%;
+    }
+
+    .js-motion .scroll-progress {
+      animation: grow-x linear both;
+      animation-timeline: scroll(root);
+    }
+  }
+
+  /* Fallback path: IntersectionObserver toggles .visible from JS */
+  @supports not (animation-timeline: view()) {
+    .js-motion .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .js-motion .reveal.visible {
+      opacity: 1;
+      transform: none;
+    }
+
+    .js-motion .skill-group.reveal:nth-child(2) { transition-delay: 0.08s; }
+    .js-motion .skill-group.reveal:nth-child(3) { transition-delay: 0.16s; }
+    .js-motion .skill-group.reveal:nth-child(4) { transition-delay: 0.24s; }
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(26px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes line-up {
+    from { transform: translateY(118%); }
+    to { transform: none; }
+  }
+
+  @keyframes draw-line {
+    to { stroke-dashoffset: 0; }
+  }
+
+  @keyframes reveal-up {
+    from { opacity: 0; transform: translateY(26px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes parallax {
+    from { transform: translateY(5%) scale(1.14); }
+    to { transform: translateY(-5%) scale(1.14); }
+  }
+
+  @keyframes grow-x {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
   }
 }
