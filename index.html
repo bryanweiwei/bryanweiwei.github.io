@@ -5,716 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bryan Wei — Building in the Age of AI</title>
 <meta name="description" content="Bryan Wei is a sophomore at NYU Stern studying Business, Technology, and Entrepreneurship. Building at the intersection of business and AI, and most drawn to tech, startups, and venture.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --mint: #e8f3ec;
-    --mint-deep: #d4e8db;
-    --mint-soft: #f0f7f2;
-    --ink: #1f2a24;
-    --ink-soft: #4a5c52;
-    --accent: #2d5a3d;
-    --accent-bright: #3d7a52;
-    --line: #c4dbcc;
-    --paper: #f6faf7;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  html { scroll-behavior: smooth; }
-
-  body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: var(--mint);
-    color: var(--ink);
-    line-height: 1.6;
-    font-size: 17px;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
-  }
-
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    background-image:
-      radial-gradient(ellipse at 10% 20%, rgba(61, 122, 82, 0.08) 0%, transparent 50%),
-      radial-gradient(ellipse at 90% 80%, rgba(45, 90, 61, 0.06) 0%, transparent 50%),
-      radial-gradient(ellipse at 50% 50%, rgba(196, 219, 204, 0.15) 0%, transparent 70%);
-  }
-
-  .container {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 40px;
-    position: relative;
-    z-index: 2;
-  }
-
-  nav {
-    padding: 32px 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 60px;
-  }
-
-  .logo {
-    font-family: 'Fraunces', Georgia, serif;
-    font-weight: 500;
-    font-size: 24px;
-    letter-spacing: -0.02em;
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-  }
-
-  .logo-mark {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    background: var(--accent);
-    border-radius: 50%;
-    transform: translateY(-2px);
-  }
-
-  .logo em {
-    font-style: italic;
-    color: var(--accent);
-    font-weight: 400;
-  }
-
-  .nav-links {
-    display: flex;
-    gap: 32px;
-    list-style: none;
-  }
-
-  .nav-links a {
-    color: var(--ink-soft);
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    letter-spacing: 0.02em;
-    position: relative;
-    padding-bottom: 2px;
-  }
-
-  .nav-links a::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    width: 0;
-    height: 1px;
-    background: var(--accent);
-    transition: width 0.3s ease;
-  }
-
-  .nav-links a:hover { color: var(--accent); }
-  .nav-links a:hover::after { width: 100%; }
-
-  .hero {
-    display: grid;
-    grid-template-columns: 1fr 280px;
-    gap: 80px;
-    align-items: end;
-    padding: 40px 0 100px;
-    position: relative;
-  }
-
-  .hero-eyebrow {
-    font-size: 13px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    color: var(--accent);
-    margin-bottom: 28px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .hero-eyebrow::before {
-    content: "";
-    width: 32px;
-    height: 1px;
-    background: var(--accent);
-  }
-
-  .hero h1 {
-    font-family: 'Fraunces', Georgia, serif;
-    font-weight: 400;
-    font-size: clamp(48px, 7.5vw, 92px);
-    line-height: 0.98;
-    letter-spacing: -0.035em;
-    margin-bottom: 36px;
-  }
-
-  .hero h1 .line-2 {
-    display: block;
-    padding-left: 1.2em;
-  }
-
-  .hero h1 em {
-    font-style: italic;
-    color: var(--accent);
-    font-weight: 400;
-    position: relative;
-  }
-
-  .hero h1 .underlined {
-    position: relative;
-    display: inline-block;
-  }
-
-  .hero h1 .underlined::after {
-    content: "";
-    position: absolute;
-    left: -4%;
-    bottom: -8px;
-    width: 108%;
-    height: 14px;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 14' preserveAspectRatio='none'><path d='M2,8 Q50,2 100,7 T198,6' stroke='%233d7a52' stroke-width='2.5' fill='none' stroke-linecap='round'/></svg>");
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
-  }
-
-  .hero-meta {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    margin-top: 24px;
-    flex-wrap: wrap;
-  }
-
-  .hero-meta .pill {
-    font-size: 13px;
-    color: var(--ink-soft);
-    padding: 6px 14px;
-    border: 1px solid var(--line);
-    border-radius: 100px;
-    background: var(--paper);
-  }
-
-  .hero-meta .arrow-link {
-    font-size: 14px;
-    color: var(--ink);
-    text-decoration: none;
-    font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: gap 0.3s ease, color 0.2s ease;
-  }
-
-  .hero-meta .arrow-link:hover { gap: 14px; color: var(--accent); }
-
-  .headshot-wrap {
-    position: relative;
-    width: 240px;
-    height: 300px;
-    margin-left: auto;
-  }
-
-  .headshot-wrap::before {
-    content: "";
-    position: absolute;
-    top: 16px;
-    left: -16px;
-    right: 16px;
-    bottom: -16px;
-    background: var(--mint-deep);
-    border-radius: 4px;
-    z-index: -1;
-  }
-
-  .headshot-wrap img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 4px;
-    background: var(--mint-deep);
-    display: block;
-    filter: saturate(0.92);
-  }
-
-  .headshot-tag {
-    position: absolute;
-    bottom: -28px;
-    right: 8px;
-    font-family: 'Fraunces', Georgia, serif;
-    font-style: italic;
-    font-size: 14px;
-    color: var(--accent);
-    background: var(--mint);
-    padding: 4px 10px;
-  }
-
-  section {
-    padding: 80px 0;
-    scroll-margin-top: 32px;
-    position: relative;
-  }
-
-  .section-header {
-    display: flex;
-    align-items: baseline;
-    gap: 24px;
-    margin-bottom: 56px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .section-num {
-    font-family: 'Fraunces', Georgia, serif;
-    font-style: italic;
-    font-weight: 400;
-    font-size: 18px;
-    color: var(--accent);
-    flex-shrink: 0;
-  }
-
-  .section-header h2 {
-    font-family: 'Fraunces', Georgia, serif;
-    font-weight: 500;
-    font-size: clamp(32px, 4vw, 48px);
-    letter-spacing: -0.02em;
-    line-height: 1.05;
-    flex: 1;
-  }
-
-  .section-header h2 em {
-    font-style: italic;
-    color: var(--accent);
-    font-weight: 400;
-  }
-
-  .about-grid {
-    display: grid;
-    grid-template-columns: 1fr 240px;
-    gap: 80px;
-    align-items: start;
-  }
-
-  .about-text p {
-    font-size: 19px;
-    line-height: 1.65;
-    margin-bottom: 20px;
-    color: var(--ink);
-    max-width: 600px;
-  }
-
-  .about-text p:first-child::first-letter {
-    font-family: 'Fraunces', Georgia, serif;
-    font-size: 56px;
-    font-weight: 500;
-    float: left;
-    line-height: 0.9;
-    margin: 8px 10px 0 0;
-    color: var(--accent);
-  }
-
-  .about-text p:last-child { margin-bottom: 0; }
-
-  .about-aside {
-    border-left: 1px solid var(--line);
-    padding-left: 24px;
-    padding-top: 8px;
-  }
-
-  .about-aside h5 {
-    font-family: 'Fraunces', Georgia, serif;
-    font-style: italic;
-    font-weight: 400;
-    font-size: 15px;
-    color: var(--ink-soft);
-    margin-bottom: 12px;
-  }
-
-  .about-aside ul { list-style: none; }
-
-  .about-aside li {
-    font-size: 14px;
-    color: var(--ink);
-    padding: 6px 0;
-    display: flex;
-    justify-content: space-between;
-    border-bottom: 1px dashed var(--line);
-  }
-
-  .about-aside li:last-child { border-bottom: none; }
-
-  .about-aside li span {
-    color: var(--ink-soft);
-    font-size: 13px;
-  }
-
-  .project {
-    display: grid;
-    grid-template-columns: 60px 1fr 320px;
-    gap: 40px;
-    padding: 56px 0;
-    border-top: 1px solid var(--line);
-    align-items: start;
-  }
-
-  .project:last-child { border-bottom: 1px solid var(--line); }
-
-  .project-num {
-    font-family: 'Fraunces', Georgia, serif;
-    font-style: italic;
-    font-weight: 400;
-    font-size: 28px;
-    color: var(--accent);
-    line-height: 1;
-    padding-top: 8px;
-  }
-
-  .project-img {
-    width: 100%;
-    aspect-ratio: 4/3;
-    object-fit: cover;
-    background: var(--mint-deep);
-    border-radius: 4px;
-    display: block;
-    filter: saturate(0.95);
-    transition: transform 0.4s ease;
-  }
-
-  .project:hover .project-img { transform: translateY(-4px); }
-
-  .project-logo {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--paper);
-    padding: 36px;
-  }
-
-  .project-logo img {
-    width: 100%;
-    height: auto;
-    max-height: 100%;
-    object-fit: contain;
-    filter: none;
-  }
-
-  .project-meta {
-    font-size: 12px;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    font-weight: 600;
-    margin-bottom: 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .project-meta::before {
-    content: "";
-    width: 6px;
-    height: 6px;
-    background: var(--accent);
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  .project-content h3 {
-    font-family: 'Fraunces', Georgia, serif;
-    font-weight: 500;
-    font-size: 30px;
-    letter-spacing: -0.015em;
-    margin-bottom: 16px;
-    line-height: 1.15;
-  }
-
-  .project-content h3 em {
-    font-style: italic;
-    color: var(--accent);
-    font-weight: 400;
-  }
-
-  .project-content p {
-    color: var(--ink-soft);
-    font-size: 16px;
-    line-height: 1.65;
-    margin-bottom: 20px;
-    max-width: 480px;
-  }
-
-  .project-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--ink);
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    padding-bottom: 2px;
-    border-bottom: 1px solid var(--accent);
-    transition: gap 0.3s ease, color 0.2s ease;
-  }
-
-  .project-link:hover {
-    color: var(--accent);
-    gap: 14px;
-  }
-
-  .skills-intro {
-    font-family: 'Fraunces', Georgia, serif;
-    font-style: italic;
-    font-size: 22px;
-    color: var(--ink-soft);
-    margin-bottom: 40px;
-    max-width: 600px;
-    line-height: 1.4;
-  }
-
-  .skills-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 1px;
-    background: var(--line);
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-  .skill-group {
-    background: var(--paper);
-    padding: 32px 28px;
-  }
-
-  .skill-group h4 {
-    font-family: 'Fraunces', Georgia, serif;
-    font-weight: 500;
-    font-size: 17px;
-    margin-bottom: 16px;
-    color: var(--accent);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .skill-group h4 .num {
-    font-style: italic;
-    font-weight: 400;
-    font-size: 14px;
-    color: var(--ink-soft);
-  }
-
-  .skill-group ul { list-style: none; }
-
-  .skill-group li {
-    color: var(--ink);
-    font-size: 15px;
-    padding: 5px 0;
-  }
-
-  .contact-block {
-    text-align: center;
-    padding: 80px 40px;
-    background: var(--paper);
-    border-radius: 4px;
-    border: 1px solid var(--line);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .contact-block::before {
-    content: "";
-    position: absolute;
-    top: -100px;
-    right: -100px;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(61, 122, 82, 0.08) 0%, transparent 70%);
-    border-radius: 50%;
-  }
-
-  .contact-block::after {
-    content: "";
-    position: absolute;
-    bottom: -100px;
-    left: -100px;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(45, 90, 61, 0.06) 0%, transparent 70%);
-    border-radius: 50%;
-  }
-
-  .contact-eyebrow {
-    font-family: 'Fraunces', Georgia, serif;
-    font-style: italic;
-    font-size: 18px;
-    color: var(--accent);
-    margin-bottom: 16px;
-    position: relative;
-  }
-
-  .contact-block h2 {
-    font-family: 'Fraunces', Georgia, serif;
-    font-weight: 500;
-    font-size: clamp(40px, 5vw, 56px);
-    letter-spacing: -0.025em;
-    line-height: 1;
-    margin-bottom: 24px;
-    position: relative;
-  }
-
-  .contact-block h2 em {
-    font-style: italic;
-    color: var(--accent);
-    font-weight: 400;
-  }
-
-  .contact-block p {
-    color: var(--ink-soft);
-    font-size: 18px;
-    margin-bottom: 36px;
-    max-width: 520px;
-    margin-left: auto;
-    margin-right: auto;
-    position: relative;
-    line-height: 1.55;
-  }
-
-  .contact-links {
-    display: flex;
-    gap: 14px;
-    justify-content: center;
-    flex-wrap: wrap;
-    position: relative;
-  }
-
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 14px 28px;
-    border-radius: 100px;
-    text-decoration: none;
-    font-size: 15px;
-    font-weight: 500;
-    transition: all 0.25s ease;
-  }
-
-  .btn-primary {
-    background: var(--accent);
-    color: var(--mint);
-    border: 1px solid var(--accent);
-  }
-
-  .btn-primary:hover {
-    background: var(--ink);
-    border-color: var(--ink);
-    transform: translateY(-2px);
-  }
-
-  .btn-secondary {
-    background: transparent;
-    color: var(--ink);
-    border: 1px solid var(--accent);
-  }
-
-  .btn-secondary:hover {
-    background: var(--accent);
-    color: var(--mint);
-    transform: translateY(-2px);
-  }
-
-  footer {
-    padding: 48px 0 60px;
-    margin-top: 40px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: var(--ink-soft);
-    font-size: 13px;
-    border-top: 1px solid var(--line);
-  }
-
-  footer .made-with {
-    font-family: 'Fraunces', Georgia, serif;
-    font-style: italic;
-    font-size: 14px;
-  }
-
-  @media (max-width: 820px) {
-    .container { padding: 0 24px; }
-    nav { margin-bottom: 32px; }
-    .nav-links { gap: 20px; }
-    .hero {
-      grid-template-columns: 1fr;
-      gap: 56px;
-      padding: 24px 0 60px;
-    }
-    .hero h1 .line-2 { padding-left: 0.6em; }
-    .headshot-wrap {
-      width: 200px;
-      height: 250px;
-      margin-left: 0;
-    }
-    .about-grid {
-      grid-template-columns: 1fr;
-      gap: 40px;
-    }
-    .about-aside {
-      border-left: none;
-      border-top: 1px solid var(--line);
-      padding-left: 0;
-      padding-top: 24px;
-    }
-    .project {
-      grid-template-columns: 1fr;
-      gap: 24px;
-      padding: 40px 0;
-    }
-    .project-num {
-      font-size: 22px;
-      padding-top: 0;
-    }
-    .project-img {
-      max-width: 320px;
-      aspect-ratio: 16/10;
-    }
-    .section-header h2 { font-size: 32px; }
-    .contact-block { padding: 56px 24px; }
-    footer {
-      flex-direction: column;
-      gap: 12px;
-      text-align: center;
-    }
-  }
-
-  .fade-in {
-    opacity: 0;
-    transform: translateY(16px);
-    transition: opacity 0.8s ease, transform 0.8s ease;
-  }
-
-  .fade-in.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+<a class="skip-link" href="#main">Skip to content</a>
+
 <div class="container">
 
-  <nav>
-    <div class="logo">
+  <nav aria-label="Primary">
+    <a class="logo" href="#top">
       <span class="logo-mark"></span>
       Bryan <em>Wei</em>
-    </div>
+    </a>
     <ul class="nav-links">
       <li><a href="#about">About</a></li>
       <li><a href="#projects">Work</a></li>
@@ -723,28 +30,34 @@
     </ul>
   </nav>
 
-  <header class="hero fade-in">
-    <div class="hero-text">
-      <div class="hero-eyebrow">Bryan Wei · NYU Stern '29</div>
-      <h1>
-        Building things
-        <span class="line-2">in the age of <em><span class="underlined">AI</span></em>.</span>
-      </h1>
+  <header class="hero" id="top">
+    <p class="hero-eyebrow">Bryan Wei · NYU Stern '29</p>
+    <h1>
+      <span class="h1-line">Building things</span>
+      <span class="h1-line h1-line-2">in the age of <em><span class="underlined">AI</span></em>.</span>
+    </h1>
+    <div class="hero-foot">
       <div class="hero-meta">
         <span class="pill">Taipei → New York</span>
         <a href="#projects" class="arrow-link">See the work →</a>
       </div>
-    </div>
-    <div class="headshot-wrap">
-      <img src="images/headshot.jpg" alt="Headshot of Bryan Wei, smiling, casual professional portrait">
-      <div class="headshot-tag">that's me</div>
+      <div class="headshot-wrap">
+        <img src="images/headshot.jpg" width="600" height="742" fetchpriority="high" alt="Headshot of Bryan Wei, smiling, casual professional portrait">
+        <div class="headshot-tag">that's me</div>
+      </div>
     </div>
   </header>
 
-  <section id="about" class="fade-in">
+</div>
+
+<main id="main">
+
+<div class="container">
+
+  <section id="about" aria-labelledby="about-title">
     <div class="section-header">
-      <span class="section-num">i.</span>
-      <h2>A little <em>about me.</em></h2>
+      <span class="section-num" aria-hidden="true">i.</span>
+      <h2 id="about-title">A little <em>about me.</em></h2>
     </div>
     <div class="about-grid">
       <div class="about-text">
@@ -753,7 +66,7 @@
         <p>I'm most drawn to tech, startups, and venture, with product still on the table. If you're working on something interesting, I'd love to hear about it.</p>
       </div>
       <aside class="about-aside">
-        <h5>Currently</h5>
+        <h3>Currently</h3>
         <ul>
           <li>School <span>NYU Stern</span></li>
           <li>Studying <span>BTE</span></li>
@@ -765,77 +78,87 @@
     </div>
   </section>
 
-  <section id="projects" class="fade-in">
+  <section id="projects" aria-labelledby="projects-title">
     <div class="section-header">
-      <span class="section-num">ii.</span>
-      <h2>Selected <em>work.</em></h2>
+      <span class="section-num" aria-hidden="true">ii.</span>
+      <h2 id="projects-title">Selected <em>work.</em></h2>
     </div>
 
-    <div class="project">
-      <div class="project-num">01</div>
+    <article class="project">
+      <div class="project-num" aria-hidden="true">01</div>
       <div class="project-content">
-        <div class="project-meta">Technical Fellow · NYU Stern AIIA Technical Fellowship</div>
+        <p class="project-meta">Technical Fellow · NYU Stern AIIA Technical Fellowship</p>
         <h3>VOINOSIS <em>U.S. Market Entry</em></h3>
         <p>Technical seat on a four-person team driving the U.S. expansion of VOINOSIS, a Korean healthcare-AI startup whose engine screens for early cognitive decline from 2 to 3 minutes of speech using acoustic (non-language) analysis. I mapped the U.S. competitive landscape and profiled the closest voice-based rival to sharpen positioning, contributed HIPAA and data-compliance recommendations for a Mount Sinai clinical pilot, and am building a U.S. hiring plan for entry-level technical roles covering sourcing, compensation, and visa pathways.</p>
         <a class="project-link" href="#contact">Ask me about it →</a>
       </div>
-      <a class="project-img project-logo" href="https://voinosis.com/en/" target="_blank" rel="noopener" aria-label="Visit the VOINOSIS website"><img src="images/voinosis-logo.png" alt="VOINOSIS logo"></a>
-    </div>
+      <a class="project-figure figure-plate" href="https://voinosis.com/en/" target="_blank" rel="noopener" aria-label="Visit the VOINOSIS website">
+        <img src="images/voinosis-logo.png" width="500" height="144" loading="lazy" decoding="async" alt="VOINOSIS logo">
+      </a>
+    </article>
 
-    <div class="project">
-      <div class="project-num">02</div>
+    <article class="project">
+      <div class="project-num" aria-hidden="true">02</div>
       <div class="project-content">
-        <div class="project-meta">Case Competition · Salesforce</div>
+        <p class="project-meta">Case Competition · Salesforce</p>
         <h3>AI Middleware <em>Prototype</em></h3>
         <p>Built and presented an AI middleware concept as part of a Salesforce case competition focused on the real value firms can deliver clients in the age of AI. The prototype explored how to bridge enterprise data and AI workflows in ways that feel native rather than bolted-on.</p>
         <a class="project-link" href="https://lovable.dev/projects/fb15d405-ea90-4eda-8a91-824d44908fc8" target="_blank" rel="noopener">View prototype →</a>
       </div>
-      <img src="images/project-1.jpg" alt="MedAssist clinical portal interface with a Salesforce-powered governance audit trail showing live PHI masking and compliance checks" class="project-img">
-    </div>
+      <figure class="project-figure figure-wide">
+        <img src="images/project-1.jpg" width="800" height="415" loading="lazy" decoding="async" alt="MedAssist clinical portal interface with a Salesforce-powered governance audit trail showing live PHI masking and compliance checks">
+      </figure>
+    </article>
 
-    <div class="project">
-      <div class="project-num">03</div>
+    <article class="project">
+      <div class="project-num" aria-hidden="true">03</div>
       <div class="project-content">
-        <div class="project-meta">Product Manager · Empire Health Labs</div>
+        <p class="project-meta">Product Manager · Empire Health Labs</p>
         <h3>Healthcare Consulting <em>in the Age of AI</em></h3>
         <p>Helping shape a consulting startup advising healthcare companies on how to navigate AI. I lead competitive analysis, scope service packages, and coordinate outreach and content — recently shipping research articles twice a week to build credibility in the space.</p>
         <a class="project-link" href="#contact">Ask me about it →</a>
       </div>
-      <img src="images/project-2.jpg" alt="Empire Health Labs publication cover titled The Power of One Story, with a figure facing branching paths of light" class="project-img">
-    </div>
+      <figure class="project-figure figure-portrait">
+        <img src="images/project-2.jpg" width="530" height="755" loading="lazy" decoding="async" alt="Empire Health Labs publication cover titled The Power of One Story, with a figure facing branching paths of light">
+      </figure>
+    </article>
 
-    <div class="project">
-      <div class="project-num">04</div>
+    <article class="project">
+      <div class="project-num" aria-hidden="true">04</div>
       <div class="project-content">
-        <div class="project-meta">B2B Growth · Velric</div>
+        <p class="project-meta">B2B Growth · Velric</p>
         <h3>Velric Enterprise <em>Recruiting</em></h3>
         <p>Joined the growth team to take an AI-optimized recruiting product to HR departments at tech and healthcare companies. Reached 50+ teams, drafted service agreements, and learned how to turn cold LinkedIn touches into warm executive conversations.</p>
         <a class="project-link" href="#contact">Ask me about it →</a>
       </div>
-      <img src="images/project-3.jpg" alt="Velric marketing page showing three problems with traditional recruiting: resume inflation, buried applicants, and premature interviews" class="project-img">
-    </div>
+      <figure class="project-figure figure-wide">
+        <img src="images/project-3.jpg" width="800" height="339" loading="lazy" decoding="async" alt="Velric marketing page showing three problems with traditional recruiting: resume inflation, buried applicants, and premature interviews">
+      </figure>
+    </article>
 
-    <div class="project">
-      <div class="project-num">05</div>
+    <article class="project">
+      <div class="project-num" aria-hidden="true">05</div>
       <div class="project-content">
-        <div class="project-meta">In Development · NYU</div>
+        <p class="project-meta">In Development · NYU</p>
         <h3>Meal-Sharing <em>for NYU Students</em></h3>
         <p>Building a platform for NYU students with leftover meal plan swipes to share them with classmates who'd use them. Currently scoping the product, working through the on-campus logistics, and figuring out how to launch it without getting in trouble with dining services.</p>
         <a class="project-link" href="#contact">Follow along →</a>
       </div>
-      <img src="images/project-4.jpg" alt="BowlDrop mobile app mockup showing open meal orders for NYU students with bid prices and a Grab This Order action" class="project-img">
-    </div>
+      <figure class="project-figure figure-portrait">
+        <img src="images/project-4.jpg" width="542" height="995" loading="lazy" decoding="async" alt="BowlDrop mobile app mockup showing open meal orders for NYU students with bid prices and a Grab This Order action">
+      </figure>
+    </article>
   </section>
 
-  <section id="skills" class="fade-in">
+  <section id="skills" aria-labelledby="skills-title">
     <div class="section-header">
-      <span class="section-num">iii.</span>
-      <h2>What I bring <em>to a team.</em></h2>
+      <span class="section-num" aria-hidden="true">iii.</span>
+      <h2 id="skills-title">What I bring <em>to a team.</em></h2>
     </div>
     <p class="skills-intro">A mix of product instinct, business development chops, and enough technical fluency to actually build the thing.</p>
     <div class="skills-grid">
       <div class="skill-group">
-        <h4><span class="num">01</span> Product &amp; Strategy</h4>
+        <h3><span class="num" aria-hidden="true">01</span> Product &amp; Strategy</h3>
         <ul>
           <li>Product thinking</li>
           <li>Competitive analysis</li>
@@ -844,7 +167,7 @@
         </ul>
       </div>
       <div class="skill-group">
-        <h4><span class="num">02</span> Business Development</h4>
+        <h3><span class="num" aria-hidden="true">02</span> Business Development</h3>
         <ul>
           <li>B2B outreach</li>
           <li>Service agreements</li>
@@ -853,7 +176,7 @@
         </ul>
       </div>
       <div class="skill-group">
-        <h4><span class="num">03</span> Technical</h4>
+        <h3><span class="num" aria-hidden="true">03</span> Technical</h3>
         <ul>
           <li>Python</li>
           <li>SQL (PostgreSQL)</li>
@@ -863,7 +186,7 @@
         </ul>
       </div>
       <div class="skill-group">
-        <h4><span class="num">04</span> Languages</h4>
+        <h3><span class="num" aria-hidden="true">04</span> Languages</h3>
         <ul>
           <li>English (fluent)</li>
           <li>Mandarin (fluent)</li>
@@ -872,41 +195,27 @@
     </div>
   </section>
 
-  <section id="contact" class="fade-in">
-    <div class="contact-block">
-      <div class="contact-eyebrow">— let's talk —</div>
-      <h2>Working on something <em>interesting?</em></h2>
-      <p>I'm most drawn to tech, startups, and venture, and I always have time for a coffee with someone building something good.</p>
-      <div class="contact-links">
-        <a class="btn btn-primary" href="mailto:bryan.wei@stern.nyu.edu">Email me →</a>
-        <a class="btn btn-secondary" href="https://www.linkedin.com/in/wei-bryan/" target="_blank" rel="noopener">LinkedIn</a>
+</div>
+
+  <section id="contact" aria-labelledby="contact-title" class="contact-band">
+    <div class="container">
+      <div class="contact-inner">
+        <p class="contact-eyebrow"><span class="section-num" aria-hidden="true">iv.</span> — let's talk —</p>
+        <h2 id="contact-title">Working on something <em>interesting?</em></h2>
+        <p>I'm most drawn to tech, startups, and venture, and I always have time for a coffee with someone building something good.</p>
+        <div class="contact-links">
+          <a class="btn btn-primary" href="mailto:bryan.wei@stern.nyu.edu">Email me →</a>
+          <a class="btn btn-secondary" href="https://www.linkedin.com/in/wei-bryan/" target="_blank" rel="noopener">LinkedIn</a>
+        </div>
       </div>
+      <footer>
+        <div>© 2026 Bryan Wei</div>
+        <div class="made-with">made with care in NYC</div>
+      </footer>
     </div>
   </section>
 
-  <footer>
-    <div>© 2026 Bryan Wei</div>
-    <div class="made-with">made with care in NYC</div>
-  </footer>
-
-</div>
-
-<script>
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-        observer.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.1 });
-
-  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
-
-  window.addEventListener('load', () => {
-    document.querySelector('.hero').classList.add('visible');
-  });
-</script>
+</main>
 
 </body>
 </html>
