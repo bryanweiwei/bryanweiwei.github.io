@@ -624,19 +624,24 @@
       guy.style.opacity = gop.toFixed(3);
       var hop = 0, gx = 0, tilt = 0, frac = 0, moving = false;
       if (p < 39) {
-        /* hops happen BETWEEN stations; at each composed station stop
-           he is grounded (so idle fidgets can play) */
-        var rel = (p - 8) / 9.5;
-        var within = (rel - Math.floor(rel)) * 9.5;
-        frac = (rel >= 0 && rel < 3 && within < 6.2) ? within / 6.2 : 0;
+        /* one long, readable hop per station gap: airborne for nearly
+           the whole transit, grounded at every composed stop (labels
+           at 15.2 / 24.7 / 34.2) so idle fidgets can play */
+        var HOPS = [[8, 14.4], [15.8, 23.9], [25.5, 33.4]];
+        for (var hi = 0; hi < 3; hi++) {
+          if (p >= HOPS[hi][0] && p < HOPS[hi][1]) {
+            frac = (p - HOPS[hi][0]) / (HOPS[hi][1] - HOPS[hi][0]);
+            break;
+          }
+        }
         moving = frac > 0;
-        hop = hopArc(frac) * 34;
+        hop = hopArc(frac) * 44;
         tilt = Math.sin(Math.PI * 2 * frac) * 8;
       } else {
         frac = u - Math.floor(u);
         if (u >= N - 1 || u <= 0) frac = 0;
         moving = frac > 0;
-        hop = hopArc(frac) * 20;
+        hop = hopArc(frac) * 28;
         tilt = Math.sin(Math.PI * 2 * frac) * 5;
         gx = lx * vw / 100 + 10;
       }
