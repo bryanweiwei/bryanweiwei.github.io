@@ -543,15 +543,20 @@ html.scene #work {
 }
 
 /* NOTE: never give #ring opacity < 1 — that forces preserve-3d to
-   flatten and the whole ring collapses. Fade lives on the cards. */
+   flatten and the whole ring collapses. Fade lives on the cards
+   (leaf opacity is safe and keeps content in the accessibility tree,
+   unlike visibility: hidden). Pointer-events flow by inheritance:
+   #work is none; JS sets auto on #ring while the revolve is active. */
 html.scene #ring {
   position: absolute;
   left: 50%;
   top: 50%;
   transform-style: preserve-3d;
   will-change: transform;
-  visibility: hidden;
+  pointer-events: none;
 }
+
+html.scene #ring .card { opacity: 0; } /* pre-first-frame state */
 
 html.scene #ring .card {
   position: absolute;
@@ -560,7 +565,6 @@ html.scene #ring .card {
   top: -150px;
   margin: 0;
   backface-visibility: hidden;
-  pointer-events: auto;
 }
 
 html.scene #ring .card::before { display: none; }

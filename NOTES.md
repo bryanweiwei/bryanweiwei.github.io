@@ -1,53 +1,67 @@
-# Redesign v2 — build notes
+# Redesign v3 "Broadsheet Helix" — build notes
 
-Overnight rebuild per PRD.md, on branch `redesign-v2`. Main untouched; nothing is live.
-All three phases done, each committed separately.
+Built overnight per PRD-v3.md on branch `redesign-v3` (off `redesign-v2`). Main untouched;
+nothing is live. Four commits: core scene, little Bryan, feature layer, QA.
 
-## What changed
+## What you're looking at
 
-**Phase 1 — structure**
-- Split the single file into `index.html` + `style.css` (and later `script.js`); no build step, still just files GitHub Pages can serve.
-- New type system on variable Fraunces + Inter: hero headline scales up to 128px, tighter leading, bigger section headers. Same mint/forest palette, same copy — nothing was reworded.
-- **Portrait images fixed**: the Empire Health cover and BowlDrop phone mockup no longer center-crop in a 4:3 box. They sit at their natural aspect ratio on a mint mat ("plate" treatment) with a hairline shadow. Landscape shots use a 3:2 crop; the VOINOSIS logo keeps its paper plate and now links to the site root (see review notes).
-- Project rows alternate direction on desktop (figure left / figure right) for editorial asymmetry; roman-numeral section markers kept.
-- Skills became a ruled 4-column ledger (hairlines, no boxes) instead of a card grid.
-- New dark forest contact band (solid `#17211b`, no gradients) with the footer inside it.
-- Added `favicon.svg` (serif "B" monogram on forest green).
-- Replaced the v1 radial-gradient background blobs with a very faint SVG paper grain (blobs are on the PRD's banned list; grain fits "richer paper textures").
-- Semantic pass: `main`/`article`/`figure`, skip link, focus-visible outlines, lazy-loaded images with reserved dimensions (verified zero layout shift), heading order clean.
+The site is now the mockup-d experience with real content:
 
-**Phase 2 — motion** (all gated behind `prefers-reduced-motion: no-preference`)
-- Load choreography: eyebrow rises, headline reveals line-by-line through overflow masks, the hand-drawn underline under "AI" draws itself, then the meta row + headshot rise.
-- Scroll-driven reveals and project-image parallax use CSS `animation-timeline: view()` (scrubbed by scroll) with an IntersectionObserver fallback for browsers without it; a 2px reading-progress hairline at the top uses `scroll(root)` with a JS fallback.
-- **Signature moment**: hero headline letters swell in weight (Fraunces variable `wght` axis) near the cursor and ease back — mouse-only (`pointer: fine`), off under reduced motion.
-- Micro-interactions: nav underlines sweep left-to-right, arrow links widen their gap, project figures lift 5px and re-saturate on hover, nav links and buttons are subtly magnetic (max ~4px).
-- With JS off or reduced motion on, the page renders complete and static — verified, not assumed.
+- **Hero:** giant uppercase Fraunces "SHIPS REAL THINGS FOR *real people.*", line-by-line rise.
+- **Descent:** the ink line runs down the screen; Taipei / New York / Kuala Lumpur stations ride past, alternating sides. Little Bryan hops the line between them.
+- **Elbow:** green node lights, the line turns horizontal, "the work, in order".
+- **Revolve:** five ink-bordered cards revolve around the line in chronological order, each easing to a stop facing front (scroll-driven, with dwell so cards settle rather than drift). Ghost year bottom-right tracks the front card. Back cards keep a 0.45 opacity floor, no blur or desaturation.
+- **Finale:** loud "WORKING ON SOMETHING INTERESTING? SAY HI.", stats band, GitHub activity strip, the mint-chip line. Little Bryan stands on the headline baseline and waves.
+- **Features:** Ctrl+K / Cmd+K command palette (jump, copy email, copy page as Markdown, toggle the scroll experience on/off), live GitHub strip, `llms.txt`.
+- **Mobile (<760px) and no-JS:** a designed vertical timeline (ink line down the left, stations and cards docked to it, little Bryan hops down it and waves at the bottom). **Reduced motion:** same layout, fully static, little Bryan in a single standing pose. These aren't afterthoughts; the static flow layout is the default and the scene is opted into.
 
 ## Decisions made autonomously
 
-1. **Split files** (PRD allowed it "if the file gets unwieldy" — it did: three concerns, ~36KB total).
-2. **Signature choice**: cursor-reactive headline over an SVG-draws-itself or constellation idea — it was on the PRD's example list, it shows off variable fonts, and it degrades to nothing on touch devices.
-3. **Dark section** = the contact band (PRD said a dark section was allowed; ending on it gives the page an arc and makes the CTA read).
-4. **VOINOSIS link**: `voinosis.com/en/` now returns 404 (checked in a real browser), so I pointed the logo at `voinosis.com` (200, Korean homepage). Flagging since the English page disappearing may matter to you.
-5. **Velric screenshot** (800×339, very wide) is cropped to 3:2 in its frame — less cropping than v1's 4:3, but if you want it un-cropped it could get the plate treatment like the portraits.
-6. Nav stays non-sticky (restrained option); the progress hairline covers orientation.
-7. `PRD.md` and this file are committed on the branch. If you merge as-is they'd be publicly reachable at `/PRD.md` and `/NOTES.md` on your Pages site — harmless, but delete them before/after merging if you'd rather not.
+1. **mockup-d.html is truncated** (cuts off mid-script; no closing tags). The final ~10% — how little Bryan's transform is applied, the finale fade, scroll wiring — is reconstructed from the file's phase-map comments and the PRD. The feel of the ending is my reading of it.
+2. **Flow-first architecture:** the mockup defaults to the fixed scene and overrides it in a media query. I inverted that: static layout is the default, JS adds the scene only when viewport ≥760px + motion allowed + not user-disabled. Safer with JS off and simpler to reason about.
+3. **No photography.** Mockup-d is purely typographic, so the headshot, project screenshots, and VOINOSIS logo are not on the page. The files remain in `images/` untouched; easy to reintroduce if you miss your face.
+4. **Kicker green:** the mockup's `--pop` (#41b06e) fails WCAG contrast for small text on paper, so tiny green labels use a darker `--pop-deep` (#2c7a4a); the bright pop stays for dots, rules, underlines. Slightly less zingy, passes AA.
+5. **Card tags/titles from the mockup, descriptions from v2** (per PRD), VOINOSIS updated to past tense + July 2026 completion. The AI Middleware card keeps its live Lovable prototype link. The one em-dash inside a v2 description ("content — recently shipping") became a comma; year ranges use en dashes (2007–2025), which I read as allowed ("no em-dashes").
+6. **Ctrl K vs ⌘K:** the nav chip and palette show Ctrl K on Windows/Linux, ⌘K on Mac.
+7. **Motion toggle** flips the experience live (no reload) and persists in localStorage.
+8. **Palette markup keeps `role="listbox"`** — html-validate wanted a native `<select>`, which is the wrong element for a command palette; rule disabled for that one line with a comment.
+9. `llms.txt` and the "Copy this page as Markdown" text are maintained as two copies of the same content (no build step to share them). If you edit copy later, update both.
 
-## QA done (Phase 3)
+## Two technical notes for future-you (or future-Claude)
 
-- Screenshots at 375 / 768 / 1280 via headless Chrome (puppeteer-core), including scrolling passes so the scroll-driven states render as users see them. Artifacts in `..\_qa-shots\` (outside the repo) if you want to flip through.
-- Reduced-motion emulated: zero animation, everything visible, smooth-scroll off.
-- Keyboard: skip link → logo → nav → hero → project links, in order; visible focus rings.
-- `html-validate`: clean. No console errors or page errors. No horizontal overflow at any width. All images load with alt text and reserved dimensions (no layout shift). External links checked live (LinkedIn returns its usual bot-block code; the link itself is v1 content, unchanged).
+- **Never give `#ring` opacity below 1.** Opacity < 1 forces the browser to flatten `preserve-3d` and the whole 3D revolve collapses into a tilted mess (this bit us mid-build: even `0.999999` from a fade calculation triggers it). Fades live on the individual cards.
+- The ring's x-offset is clamped by the perspective magnification (~1.354×) so the front card never overflows narrow scene viewports (768–900px).
 
-## Worth your eyes in the morning
+## QA done
 
-- The cursor letter-swell on the headline — I verified it works (weights 381→629 by proximity) but taste is yours; if it feels like too much, deleting `initSignature()` in `script.js` (and the `.ch` rule in the CSS) removes it cleanly.
-- The grain texture and dark band are the two boldest departures from v1 — check they feel like "same person, better craft."
-- `README.md` in this repo is empty — fine to leave, easy to fill later.
+- Screenshots at 375 / 768 / 1280 including 13 scrolled stops through every phase (headless Chrome + puppeteer-core; artifacts in `..\_qa-shots\`).
+- Reduced-motion emulation: static render, zero running animations.
+- Keyboard: skip link → logo → palette → contact links; palette fully keyboard-driven (Ctrl+K, arrows, Enter, Esc, focus restore). Cards stay in the accessibility tree in scene mode (opacity, not visibility).
+- html-validate clean; no console or page errors at any width; no horizontal overflow; no em-dashes in rendered copy (scripted sweep).
+- The scroll engine runs only on scroll events — verified ~0 style mutations/sec while idle.
+- GitHub strip fetches real events (shows your last pushes), caches for 30 minutes, hides on failure.
+
+## Needs your taste pass
+
+- **The revolve pacing** — dwell is 18% of each card's slice. If cards feel like they linger too long or too little, `DWELL` in script.js is one number.
+- **Little Bryan's poses** — three hand-drawn-ish SVG poses. If leap reads as "falling", the paths are tiny and easy to tweak.
+- **The 768–1000px scene** — it works, but the cards dominate more than at 1280. If you'd rather tablets get the mobile timeline, change the 760 breakpoint to ~1000 in two places (style.css media query + the bootstrap/script matchMedia).
+- Whether "SHIPS REAL THINGS" hero framing + no headshot feels right for recruiters — this was the approved direction, just confirming you still like it in the flesh.
+
+## Public-if-merged warning
+
+These files are on the branch and would be **publicly reachable** on your live domain after merge, e.g. `bryanweiwei.github.io/PRD-v3.md`:
+
+- `PRD.md` (v2 spec, already on the branch history)
+- `PRD-v3.md`
+- `design-reference/mockup-d.html`
+- `NOTES.md` (this file)
+- `llms.txt` — **intentionally public**, leave it
+
+Delete the first four before or right after merging if you don't want them readable (they're harmless, but they're your internal docs). `git rm PRD.md PRD-v3.md NOTES.md && git rm -r design-reference` then commit.
 
 ## Morning checklist
 
-1. **Review**: open the branch — `git checkout redesign-v2` — then open `index.html` in your browser (double-click it; no server needed). Resize the window / try your phone.
-2. **Compare**: `git checkout main` and reopen to see v1 side by side if you want the before/after.
-3. **Ship it**: if happy — `git checkout main`, `git merge redesign-v2`, `git push` (pushing main deploys it live).
+1. **Review:** `git checkout redesign-v3`, open `index.html` in Chrome/Edge. Scroll the whole thing. Try Ctrl+K. Narrow the window below 760 for the mobile layout; check your phone too.
+2. **Decide** on the taste-pass items above (especially: keep internal docs public or delete them).
+3. **Ship:** `git checkout main`, `git merge redesign-v3`, `git push` — pushing main puts it live.

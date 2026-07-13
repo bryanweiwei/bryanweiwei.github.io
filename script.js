@@ -143,11 +143,16 @@
     /* ring — NEVER set opacity here: opacity < 1 forces the browser to
        flatten preserve-3d and the whole ring collapses. The fade is
        applied per-card instead (cards are leaf planes, safe to fade). */
+    /* x-offset pushes cards right of the line, but the front card is
+       magnified by perspective (1300/(1300-RADIUS) ≈ 1.354): clamp the
+       offset so its apparent box never leaves the viewport */
+    var MAG = 1300 / (1300 - RADIUS);
+    var ringX = Math.max(0, Math.min(vw * 0.18, (vw / 2 - 300) / MAG));
     ring.style.transform =
-      'translateX(' + (-shift + vw * 0.18) + 'px) rotateX(' + (-uSet * STEP) + 'deg)';
+      'translateX(' + (-shift + ringX) + 'px) rotateX(' + (-uSet * STEP) + 'deg)';
     var ringFade =
       Math.min(1, Math.max(0, (t - 0.42) / 0.04)) * (1 - ease((t - 0.86) / 0.06));
-    ring.style.visibility = ringFade <= 0 ? '' : 'visible'; /* CSS default: hidden */
+    ring.style.pointerEvents = ringFade > 0 ? 'auto' : 'none';
 
     /* per-card legibility: opacity floor 0.45, no blur, no desaturation */
     var front = 0, best = 1e9;
