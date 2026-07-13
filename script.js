@@ -638,12 +638,28 @@
         hop = hopArc(frac) * 44;
         tilt = Math.sin(Math.PI * 2 * frac) * 8;
       } else {
+        /* the revolve: he rides ON the front card (its rest position is
+           a fixed screen spot; cards arrive under him like train cars) */
         frac = u - Math.floor(u);
         if (u >= N - 1 || u <= 0) frac = 0;
         moving = frac > 0;
-        hop = hopArc(frac) * 28;
-        tilt = Math.sin(Math.PI * 2 * frac) * 5;
-        gx = lx * vw / 100 + 10;
+        var MAGg = 1300 / (1300 - RADIUS);
+        var cardX = ringX * MAGg - 235;              /* left area of the card top */
+        var cardY = 10.4 - 150 * MAGg - 2;           /* feet on the top edge */
+        var elbowX = lx * vw / 100 + 10;
+        if (p < 48) {
+          /* one big hop from the elbow onto the first card as it lands */
+          var bl = smooth((p - 45.5) / 2.5);
+          gx = elbowX + (cardX - elbowX) * bl;
+          hop = -cardY * bl + hopArc(bl) * 42;       /* container applies -hop */
+          tilt = Math.sin(Math.PI * 2 * bl) * 6;
+          moving = bl > 0 && bl < 1;
+          frac = bl;
+        } else {
+          gx = cardX;
+          hop = -cardY + hopArc(frac) * 28;          /* negated below */
+          tilt = Math.sin(Math.PI * 2 * frac) * 5;
+        }
       }
       guy.style.transform =
         'translate(' + gx + 'px,' + (-hop) + 'px) rotate(' + tilt + 'deg)';
