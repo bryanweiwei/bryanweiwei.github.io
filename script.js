@@ -288,6 +288,10 @@
   /* character context, written by renderScene each scroll frame */
   var gctx = { mode: 'hidden', frac: 0, visible: false };
 
+  /* screen offset (from center) where the line settles in the finale:
+     the rule under the sign-off. Measured from the wave anchor. */
+  var dropPx = 0;
+
   function guyTick() {
     if (!CHAR.ready || !inScene()) return;
     var now = performance.now();
@@ -526,14 +530,20 @@
     var lxWorld = (-S.slide * 38 / 100) * vw * w;
     GL.group.position.x = lxWorld;
 
-    /* the whole line bows out at the very end, after his run */
-    var lineIn = 1 - (S.lineOut || 0);
-    GL.inkMat.opacity = lineIn;
+    /* finale: the L descends to become the rule under the sign-off;
+       the vertical remnant pours away into the corner */
+    var drop = S.lineDrop || 0;
+    GL.group.position.y = -(GL.dropPx || 0) * drop * w;
+    if (drop > 0) {
+      var vCount = Math.round(GL.vIndexCount * vFrac * (1 - drop));
+      var vStart = Math.round(GL.vIndexCount * vFrac) - vCount;
+      GL.vTube.geometry.setDrawRange(vStart, vCount);
+    }
 
-    /* node pop */
-    var ns = GL.nodeBase * (0.001 + S.elbow) * Math.max(0.001, lineIn);
+    /* node pop; the corner dissolves as the rule settles */
+    var ns = GL.nodeBase * (0.001 + S.elbow) * Math.max(0.001, 1 - drop);
     GL.node.scale.setScalar(ns);
-    GL.node.children[1].material.opacity = 0.25 * S.elbow * lineIn;
+    GL.node.children[1].material.opacity = 0.25 * S.elbow * (1 - drop);
 
     /* camera: swing around the bend (only during the elbow window),
        plus a breathing dolly during the descent beats */
@@ -576,14 +586,14 @@
 
     /* lines (DOM fallback path; GL owns them when html.scene.gl) */
     var lx = -S.slide * 38;
-    var lineIn = 1 - (S.lineOut || 0);
-    vline.style.height = (S.grow * 100 * (1 - S.retract * 0.5)) + 'vh';
+    var drop = S.lineDrop || 0;
+    vline.style.height = (S.grow * 100 * (1 - S.retract * 0.5) * (1 - drop)) + 'vh';
     vline.style.marginLeft = lx + 'vw';
-    vline.style.opacity = lineIn;
     node.style.marginLeft = lx + 'vw';
+    node.style.opacity = Math.min(1, S.elbow) * (1 - drop);
     hline.style.marginLeft = lx + 'vw';
     hline.style.width = (S.elbow * 46 + S.slide * 46) + 'vw';
-    hline.style.opacity = lineIn;
+    hline.style.transform = 'translateY(' + (dropPx * drop - 1) + 'px)';
 
     /* ring */
     var MAG = 1300 / (1300 - RADIUS);
@@ -634,46 +644,50 @@
     var cardTopX = ringX * MAGc - 235;
     var cardTopY = 10.4 - 150 * MAGc - 2;
     if (p >= 93.2) {
+      /* waves standing ON the settled line, at the sign-off */
       guy.style.opacity = 1;
       var r = waveAnchor.getBoundingClientRect();
-      var wy = r.bottom - vh / 2 + 12;
+      dropPx = r.bottom + 6 - vh / 2;
+      if (GL.ready) GL.dropPx = dropPx;
+      var wy = dropPx;
       guy.style.transform =
         'translate(' + (r.left - vw / 2 + 34) + 'px,' + wy + 'px)';
       gctx.mode = 'wave';
       gctx.y = wy;
       gctx.visible = true;
     } else if (p >= 88.8) {
-      /* the exit: hop off the card onto the line, sprint along it,
-         hop off at the sign-off — the line is his runway home */
+      /* the exit: hop off the card onto the line, sprint along it as
+         it eases down into the final page, arrive at the sign-off */
       guy.style.opacity = 1;
       var ra = waveAnchor.getBoundingClientRect();
+      dropPx = ra.bottom + 6 - vh / 2;
+      if (GL.ready) GL.dropPx = dropPx;
       var tx = ra.left - vw / 2 + 34;
-      var ty = ra.bottom - vh / 2 + 12;
+      var lineY = dropPx * (S.lineDrop || 0);  /* the line's current y */
       var gx2, gy2;
       if (p < 89.9) {
         /* hop DOWN from the card top to the line */
         var d = smooth((p - 88.8) / 1.1);
         gx2 = cardTopX + 26 * d;
-        gy2 = cardTopY * (1 - d) - Math.sin(Math.PI * d) * 26;
+        gy2 = (cardTopY) * (1 - d) + lineY * d - Math.sin(Math.PI * d) * 26;
         if (CHAR.ready && CHAR.prevDropT < 0.97 && d >= 0.97) fireDust();
         CHAR.prevDropT = d;
         gctx.mode = 'jump';
         gctx.frac = Math.max(0.03, Math.min(0.97, d));
       } else if (p < 92.5) {
-        /* the sprint along the line */
+        /* the sprint, riding the line down as it settles */
         var rT = smooth((p - 89.9) / 2.6);
         gx2 = (cardTopX + 26) + (tx - cardTopX - 26) * rT;
-        gy2 = 0;
+        gy2 = lineY;
         gctx.mode = 'run';
         gctx.runX = gx2;
         CHAR.prevDropT = 0;
       } else {
-        /* hop off the line onto the sign-off baseline */
-        var d2 = smooth((p - 92.5) / 0.7);
+        /* arrived: settle to a stand as the line finishes docking */
         gx2 = tx;
-        gy2 = ty * d2 - Math.sin(Math.PI * d2) * 22;
-        gctx.mode = 'jump';
-        gctx.frac = Math.max(0.03, Math.min(0.97, d2));
+        gy2 = lineY;
+        gctx.mode = 'idle';
+        gctx.frac = 0;
       }
       guy.style.transform = 'translate(' + gx2 + 'px,' + gy2 + 'px)';
       gctx.y = gy2;
@@ -769,7 +783,7 @@
       }
     });
 
-    S = { grow: 0, retract: 0, elbow: 0, slide: 0, u: 0, ringIn: 0, swing: 0, lineOut: 0 };
+    S = { grow: 0, retract: 0, elbow: 0, slide: 0, u: 0, ringIn: 0, swing: 0, lineDrop: 0 };
 
     initChar();
     guy.classList.remove('p-stand', 'p-run', 'p-leap', 'waving');
@@ -912,8 +926,9 @@
       ease: 'power3.out', stagger: 0.09
     }, 91);
 
-    /* the line delivered him; it bows out while he waves */
-    master.to(S, { lineOut: 1, duration: 2.6, ease: 'power2.inOut' }, 93.6);
+    /* the line doesn't leave: it eases down and settles as the
+       broadsheet rule under the sign-off, part of the final page */
+    master.to(S, { lineDrop: 1, duration: 3.2, ease: 'power2.inOut' }, 90.2);
 
     /* pad the tail so the timeline is exactly 100 units — a calm hold
        after the finale, and unit thresholds stay honest */
