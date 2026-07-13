@@ -486,13 +486,12 @@ html.scene .hero {
 
 html.scene .hero .hint { display: block; animation: pulse 2.2s ease-in-out infinite; }
 
-html.scene .hero h1 .rise {
-  transform: translateY(110%);
-  animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
-}
+/* hero reveal is GSAP-owned in scene mode; CSS just hides the lines
+   until the character stagger takes over (no flash before JS runs) */
+html.scene .hero h1 .rise { transform: translateY(112%); }
 
-html.scene .hero h1 .row:nth-child(2) .rise { animation-delay: 0.12s; }
-html.scene .hero h1 .row:nth-child(3) .rise { animation-delay: 0.24s; }
+/* split units (created by JS in scene mode) */
+.ch, .w { display: inline-block; will-change: transform; }
 
 html.scene #story, html.scene #work {
   position: static;
@@ -748,8 +747,6 @@ html.scene #guy {
 }
 
 /* ---------- 11. Keyframes (used only in scene/motion contexts) ---------- */
-
-@keyframes rise { to { transform: none; } }
 
 @keyframes pulse {
   0%, 100% { opacity: 0.4; }

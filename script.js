@@ -1,12 +1,22 @@
-/* Portfolio v3 "Broadsheet Helix" — scroll engine.
-   Phase map (t = overall scroll 0..1), from design-reference/mockup-d.html:
-     0.00–0.08  hero; vertical line grows down from under the headline
-     0.08–0.38  DESCENT: stations ride up past the fixed line (0.10 each)
-     0.38–0.44  ELBOW: node lights, horizontal branch grows; lower vline retracts
-     0.44–0.88  REVOLVE: cards revolve around the horizontal line, eased settling
-     0.88–1.00  finale
-   The engine only runs in scene mode (html.scene) and only on scroll frames;
-   there is no free-running rAF loop. */
+/* Portfolio v4 "Broadsheet Helix, Cinematic Cut" — scene engine.
+
+   Phase A stack: Lenis (weighted scroll) + GSAP ScrollTrigger (all
+   choreography). One master scrubbed timeline drives the narrative:
+
+     0––10   hero; the ink line draws down
+     10––38  DESCENT: one beat per station (enter, hold, exit)
+     39––45  ELBOW: node pops (overshoot), branch grows, a held moment
+     45––87  REVOLVE: cards ease front one at a time with playful
+              overshoot, dwell, then hand off; the L slides left
+     89––100 finale, calm
+
+   Snap labels sit at every composed moment (each station, each front
+   card, the finale) so the page settles composed, never in-between.
+
+   Numeric scene state (lines, ring, guy) is tweened on the timeline
+   and rendered in one onUpdate; hero/stations/finale elements are
+   tweened directly. Flow mode (mobile / reduced motion / no JS / CDN
+   failure) never touches GSAP and keeps the v3 static timeline. */
 
 (function () {
   'use strict';
@@ -26,36 +36,98 @@
   var YEARS = ['2025', '2025', '2026', '2026', '2026'];
   var N = cards.length, STEP = 360 / N, RADIUS = 340, SPACING = 600;
 
-  var vw = innerWidth, vh = innerHeight, maxScroll = 1;
+  var vw = innerWidth, vh = innerHeight;
+
+  function hasStack() {
+    return !!(window.gsap && window.ScrollTrigger && window.Lenis);
+  }
 
   function userMotionOff() {
     try { return localStorage.getItem('bw-motion') === 'off'; } catch (e) { return false; }
   }
 
   function shouldScene() {
-    return motionQ.matches && wideQ.matches && !userMotionOff();
+    return motionQ.matches && wideQ.matches && !userMotionOff() && hasStack();
   }
 
   function inScene() { return html.classList.contains('scene'); }
 
-  var ease = function (x) { return x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x); };
+  function measure() { vw = innerWidth; vh = innerHeight; }
 
-  /* Eased settling: cards dwell facing front at each integer stop
-     instead of drifting continuously. u in [0, N-1]. */
-  var DWELL = 0.18;
-  function settle(u) {
-    if (u <= 0) return 0;
-    if (u >= N - 1) return N - 1;
-    var f = Math.floor(u), fr = u - f;
-    var g = fr < DWELL ? 0 : fr > 1 - DWELL ? 1 : ease((fr - DWELL) / (1 - 2 * DWELL));
-    return f + g;
+  /* ---------- text splitting (hand-rolled SplitText) ---------- */
+
+  function splitUnits(root, mode) {
+    /* wraps text into .ch (chars) or .w (words) spans; keeps child
+       elements (em, a) intact; returns the created spans */
+    var out = [];
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        return n.textContent.trim() === '' && mode === 'w'
+          ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(function (nd) {
+      var frag = document.createDocumentFragment();
+      var parts = mode === 'ch'
+        ? nd.textContent.split('')
+        : nd.textContent.split(/(\s+)/);
+      parts.forEach(function (p) {
+        if (p === '') return;
+        if (/^\s+$/.test(p)) { frag.appendChild(document.createTextNode(' ')); return; }
+        var s = document.createElement('span');
+        s.className = mode === 'ch' ? 'ch' : 'w';
+        s.textContent = p;
+        frag.appendChild(s);
+        out.push(s);
+      });
+      nd.parentNode.replaceChild(frag, nd);
+    });
+    return out;
   }
 
-  function measure() {
-    vw = innerWidth;
-    vh = innerHeight;
-    maxScroll = Math.max(1, document.body.scrollHeight - vh);
+  /* hero: char-level split needs an SR-safe mirror */
+  var heroSplit = null;
+  function splitHero() {
+    if (heroSplit) return heroSplit;
+    var h1 = hero.querySelector('h1');
+    var sr = document.createElement('span');
+    sr.className = 'sr-only';
+    sr.textContent = 'Ships real things for real people.';
+    h1.insertBefore(sr, h1.firstChild);
+    var rows = [].slice.call(h1.querySelectorAll('.row'));
+    rows.forEach(function (r) { r.setAttribute('aria-hidden', 'true'); });
+    heroSplit = rows.map(function (r) { return splitUnits(r, 'ch'); });
+    return heroSplit;
   }
+
+  var wordSplits = { st: null, end: null };
+  function splitCopy() {
+    if (!wordSplits.st) {
+      wordSplits.st = stations.map(function (s) {
+        return splitUnits(s.querySelector('h3'), 'w');
+      });
+    }
+    if (!wordSplits.end) {
+      var h2 = end.querySelector('h2');
+      var link = h2.querySelector('a');
+      var words = splitUnits(h2, 'w');
+      /* the link stays whole (one unit) so it remains a single tab stop */
+      wordSplits.end = words.filter(function (w) { return !link.contains(w); }).concat([link]);
+    }
+  }
+
+  /* ---------- geometry ---------- */
+
+  function placeCards() {
+    cards.forEach(function (c, i) {
+      c.style.transform =
+        'translateX(' + (i * SPACING) + 'px) rotateX(' + (i * STEP) + 'deg) translateZ(' + RADIUS + 'px)';
+    });
+  }
+
+  /* ---------- little Bryan (Phase A: v3 behavior, timeline-driven) ---------- */
 
   var lastPose = '';
   function setPose(pose, waving) {
@@ -71,136 +143,78 @@
     if (frac <= 0.02 || frac >= 0.98) return 'stand';
     if (frac < 0.22) return 'run';
     if (frac < 0.78) return 'leap';
-    return 'stand'; /* landing */
+    return 'stand';
   }
 
-  function placeCards() {
-    cards.forEach(function (c, i) {
-      c.style.transform =
-        'translateX(' + (i * SPACING) + 'px) rotateX(' + (i * STEP) + 'deg) translateZ(' + RADIUS + 'px)';
-    });
-  }
+  /* ---------- the master timeline ---------- */
 
-  function clearInline() {
-    [hero, end, tl, yearEl, node, vline, hline, ring, guy]
-      .concat(stations, cards)
-      .forEach(function (el) { el.removeAttribute('style'); });
-    guy.removeAttribute('class');
-    end.classList.remove('live');
-    prog.style.width = '0';
-  }
+  var S = null;      /* numeric scene state, tweened by the timeline */
+  var master = null;
+  var lenis = null;
 
-  /* ---------- the frame ---------- */
+  function lenisRaf(time) { lenis.raf(time * 1000); }
 
-  function frame() {
-    ticking = false;
-    if (!inScene()) return;
+  function renderScene() {
+    /* p is timeline TIME in units (0..100), not progress — all phase
+       thresholds below are authored in these units */
+    var p = master ? master.time() : 0;
+    prog.style.width = (master ? master.progress() * 100 : 0) + '%';
 
-    var t = Math.min(1, Math.max(0, scrollY / maxScroll));
-    prog.style.width = (t * 100) + '%';
-
-    /* hero */
-    var heroFade = ease((t - 0.045) / 0.05);
-    hero.style.opacity = 1 - heroFade;
-    hero.style.transform = 'translateY(' + (-heroFade * 90) + 'px)';
-
-    /* vertical line: grows to full height, then bottom retracts to the elbow */
-    var grow = ease(t / 0.08);
-    var retract = ease((t - 0.38) / 0.06);
-    vline.style.height = (grow * 100 * (1 - retract * 0.5)) + 'vh';
-
-    /* descent stations: each rides a 0.10 slice of scroll */
-    stations.forEach(function (s, i) {
-      var s0 = 0.08 + i * 0.10;
-      var st = (t - s0) / 0.10;
-      if (st < -0.25 || st > 1.4) { s.style.opacity = 0; return; }
-      var y = (1 - ease(Math.min(1, Math.max(0, st)))) * 66 - 8;
-      s.style.transform = 'translateY(' + y + 'vh)';
-      var fadeIn = ease(st / 0.25), fadeOut = 1 - ease((st - 0.85) / 0.3);
-      s.style.opacity = Math.max(0, Math.min(fadeIn, fadeOut));
-    });
-
-    /* elbow: node lights, branch grows */
-    var elbow = ease((t - 0.38) / 0.06);
-    node.style.opacity = elbow;
-
-    /* revolve progress, with settling */
-    var rtRaw = ease((t - 0.44) / 0.44);
-    var uSet = settle(rtRaw * (N - 1));
-    var shift = uSet * SPACING;
-
-    /* the whole L slides left so the branch spans the screen */
-    var slide = rtRaw > 0 ? Math.min(1, rtRaw * 2.2) : 0;
-    var lx = -slide * 38; /* vw */
+    /* lines */
+    var lx = -S.slide * 38;
+    vline.style.height = (S.grow * 100 * (1 - S.retract * 0.5)) + 'vh';
     vline.style.marginLeft = lx + 'vw';
     node.style.marginLeft = lx + 'vw';
     hline.style.marginLeft = lx + 'vw';
-    hline.style.width = (elbow * 46 + slide * 46) + 'vw';
+    hline.style.width = (S.elbow * 46 + S.slide * 46) + 'vw';
 
-    tl.style.opacity = ease((t - 0.40) / 0.06) * (1 - ease((t - 0.86) / 0.06));
-    tl.style.transform = 'translateY(' + ((1 - ease((t - 0.40) / 0.06)) * 20) + 'px)';
-
-    /* ring — NEVER set opacity here: opacity < 1 forces the browser to
-       flatten preserve-3d and the whole ring collapses. The fade is
-       applied per-card instead (cards are leaf planes, safe to fade). */
-    /* x-offset pushes cards right of the line, but the front card is
-       magnified by perspective (1300/(1300-RADIUS) ≈ 1.354): clamp the
-       offset so its apparent box never leaves the viewport */
+    /* ring */
     var MAG = 1300 / (1300 - RADIUS);
     var ringX = Math.max(0, Math.min(vw * 0.18, (vw / 2 - 300) / MAG));
+    var u = S.u;
+    var shift = u * SPACING;
     ring.style.transform =
-      'translateX(' + (-shift + ringX) + 'px) rotateX(' + (-uSet * STEP) + 'deg)';
-    var ringFade =
-      Math.min(1, Math.max(0, (t - 0.42) / 0.04)) * (1 - ease((t - 0.86) / 0.06));
-    ring.style.pointerEvents = ringFade > 0 ? 'auto' : 'none';
+      'translateX(' + (-shift + ringX) + 'px) rotateX(' + (-u * STEP) + 'deg)';
+    ring.style.pointerEvents = S.ringIn > 0 ? 'auto' : 'none';
 
-    /* per-card legibility: opacity floor 0.45, no blur, no desaturation */
     var front = 0, best = 1e9;
     cards.forEach(function (c, i) {
-      var a = ((i * STEP - uSet * STEP) % 360 + 360) % 360;
+      var a = ((i * STEP - u * STEP) % 360 + 360) % 360;
       if (a > 180) a = 360 - a;
       var face = 1 - Math.min(1, a / 130);
       var dx = Math.abs(i * SPACING - shift);
-      var o = (0.45 + 0.55 * face * Math.max(0, 1 - dx / 1800)) * ringFade;
+      var o = (0.45 + 0.55 * face * Math.max(0, 1 - dx / 1800)) * S.ringIn;
       c.style.opacity = o > 0.999 ? 1 : o.toFixed(3);
       if (dx < best) { best = dx; front = i; }
     });
     yearEl.textContent = YEARS[front];
-    yearEl.style.opacity = (rtRaw > 0.02 && t < 0.86) ? 0.9 : 0;
+    yearEl.style.opacity = S.ringIn > 0.25 ? 0.9 : 0;
 
-    /* finale */
-    var endIn = ease((t - 0.88) / 0.06);
-    end.style.opacity = endIn;
-    end.classList.toggle('live', t > 0.88);
+    end.classList.toggle('live', p > 90);
 
-    /* ---------- little Bryan ---------- */
-    if (t >= 0.90) {
-      /* stands beside the contact heading and waves */
-      guy.style.opacity = ease((t - 0.90) / 0.05);
+    /* ---- little Bryan ---- */
+    if (p >= 91) {
+      guy.style.opacity = Math.min(1, (p - 91) / 4);
       var r = waveAnchor.getBoundingClientRect();
-      var gx2 = r.left - vw / 2 + 34;
-      var gy2 = r.bottom - vh / 2 + 14; /* feet on the heading baseline */
-      guy.style.transform = 'translate(' + gx2 + 'px,' + gy2 + 'px)';
+      guy.style.transform =
+        'translate(' + (r.left - vw / 2 + 34) + 'px,' + (r.bottom - vh / 2 + 14) + 'px)';
       setPose('stand', true);
-    } else if (t > 0.055) {
+    } else if (p > 6) {
       guy.style.opacity =
-        Math.min(1, (t - 0.055) / 0.03) * (1 - ease((t - 0.86) / 0.04));
+        Math.min(1, (p - 6) / 3) * Math.max(0, Math.min(1, (89 - p) / 3));
       var hop = 0, gx = 0, tilt = 0, frac = 0;
-      if (t < 0.40) {
-        /* descent: one hop arc per station slice */
-        var u = Math.max(0, (t - 0.08) / 0.10);
-        frac = u - Math.floor(u);
+      if (p < 39) {
+        var uu = Math.max(0, (p - 10) / 9.5);
+        frac = uu - Math.floor(uu);
         hop = Math.sin(Math.PI * frac) * 34;
         tilt = Math.sin(Math.PI * 2 * frac) * 10;
       } else {
-        /* rides the (sliding) elbow; hops as each card settles in front */
-        frac = uSet - Math.floor(uSet);
-        if (uSet >= N - 1) frac = 0;
+        frac = u - Math.floor(u);
+        if (u >= N - 1 || u <= 0) frac = 0;
         hop = Math.sin(Math.PI * frac) * 20;
         tilt = Math.sin(Math.PI * 2 * frac) * 6;
         gx = lx * vw / 100 + 10;
       }
-      /* springy landing: brief squash as the feet touch down */
       var sy = 1;
       if (frac > 0.8 && frac < 0.98) {
         sy = 1 - 0.09 * Math.sin(Math.PI * (frac - 0.8) / 0.18);
@@ -214,58 +228,230 @@
     }
   }
 
-  /* flow mode keeps only the progress hairline */
-  function flowFrame() {
-    ticking = false;
-    var t = Math.min(1, Math.max(0, scrollY / maxScroll));
-    prog.style.width = (t * 100) + '%';
+  function buildScene() {
+    placeCards();
+    splitHero();
+    splitCopy();
+    measure();
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    /* Lenis: the weight */
+    lenis = new Lenis({ duration: 1.15, smoothWheel: true });
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add(lenisRaf);
+    gsap.ticker.lagSmoothing(0);
+
+    /* Route ScrollTrigger's reads/writes through Lenis so the snap
+       tween and Lenis never fight over the scroll position. */
+    ScrollTrigger.scrollerProxy(window, {
+      scrollTop: function (value) {
+        if (arguments.length) { lenis.scrollTo(value, { immediate: true }); return; }
+        return lenis.scroll;
+      },
+      getBoundingClientRect: function () {
+        return { top: 0, left: 0, width: innerWidth, height: innerHeight };
+      }
+    });
+
+    S = { grow: 0, retract: 0, elbow: 0, slide: 0, u: 0, ringIn: 0 };
+
+    /* hero entrance: staggered character rise, line by line (load, not scroll) */
+    gsap.set(hero.querySelectorAll('.rise'), { y: 0 });
+    heroSplit.forEach(function (chars, row) {
+      gsap.from(chars, {
+        yPercent: 118,
+        duration: 0.9,
+        ease: 'expo.out',
+        stagger: 0.022,
+        delay: 0.15 + row * 0.14
+      });
+    });
+
+    /* snap to the NEAREST composed moment (label), ignoring velocity
+       projection — Lenis supplies the inertia; snap only tidies the
+       landing so the page always rests composed */
+    var labelRatios = [];
+    function nearestLabel(value, self) {
+      /* ST hands us a velocity-projected value; a hard flick projects
+         to the extremes. Snap from ACTUAL progress instead — Lenis
+         supplies the inertia, snap only tidies the landing. */
+      var from = self ? self.progress : value;
+      var best = 0, bd = 2;
+      for (var i = 0; i < labelRatios.length; i++) {
+        var d = Math.abs(labelRatios[i] - from);
+        if (d < bd) { bd = d; best = labelRatios[i]; }
+      }
+      return best;
+    }
+
+    master = gsap.timeline({
+      defaults: { ease: 'none' },
+      scrollTrigger: {
+        trigger: '#runway',
+        start: 'top top',
+        end: 'bottom bottom',
+        scrub: 1,
+        snap: {
+          snapTo: nearestLabel,
+          duration: { min: 0.25, max: 0.8 },
+          ease: 'power3.inOut',
+          delay: 0.12
+        }
+      },
+      onUpdate: renderScene
+    });
+
+    master.addLabel('top', 0);
+
+    /* the line draws down while the hero holds, then the hero lifts away */
+    master.to(S, { grow: 1, duration: 8, ease: 'power2.inOut' }, 0);
+    master.to(hero, { opacity: 0, y: -90, duration: 5, ease: 'power1.in' }, 4.5);
+
+    /* DESCENT — one beat per station: enter (settle), hold, exit */
+    stations.forEach(function (st, i) {
+      var t0 = 10 + i * 9.5;
+      var words = wordSplits.st[i];
+      gsap.set(st, { opacity: 0 });
+      master.fromTo(st, { y: '58vh', opacity: 0 },
+        { y: '0vh', opacity: 1, duration: 4, ease: 'expo.out' }, t0);
+      master.from(words, {
+        yPercent: 90, opacity: 0, duration: 2.4,
+        ease: 'power3.out', stagger: 0.12
+      }, t0 + 0.6);
+      master.addLabel('st' + i, t0 + 5.2);
+      master.to(st, { y: '-62vh', opacity: 0, duration: 3.5, ease: 'power2.in' }, t0 + 6);
+    });
+
+    /* ELBOW — a held moment: retract, node pops with overshoot, branch grows */
+    master.to(S, { retract: 1, duration: 4, ease: 'power2.inOut' }, 39);
+    master.fromTo(node, { scale: 0, opacity: 0 },
+      { scale: 1, opacity: 1, duration: 2.2, ease: 'back.out(2.5)' }, 40);
+    master.to(S, { elbow: 1, duration: 4, ease: 'expo.out' }, 40.5);
+    master.fromTo(tl, { opacity: 0, y: 24 },
+      { opacity: 1, y: 0, duration: 3, ease: 'power2.out' }, 41);
+    master.addLabel('elbow', 44.5);
+
+    /* REVOLVE — the L slides out, cards take turns facing front */
+    master.to(S, { slide: 1, duration: 6, ease: 'power2.inOut' }, 45);
+    master.to(S, { ringIn: 1, duration: 2.5, ease: 'power1.out' }, 45);
+    master.addLabel('card0', 48);
+    for (var i = 1; i < N; i++) {
+      var seg = 48.5 + (i - 1) * 8;
+      master.to(S, { u: i, duration: 5.5, ease: 'back.out(1.15)' }, seg);
+      master.addLabel('card' + i, seg + 6.6);
+    }
+    /* card4 label ≈ 87.1; ring hands off to the finale */
+    master.to(S, { ringIn: 0, duration: 3, ease: 'power1.in' }, 88.5);
+    master.to(tl, { opacity: 0, duration: 2, ease: 'power1.in' }, 88.5);
+
+    /* FINALE — calm */
+    gsap.set(end, { opacity: 0 });
+    master.fromTo(end, { opacity: 0, y: 26 },
+      { opacity: 1, y: 0, duration: 5, ease: 'power2.out' }, 90.5);
+    master.from(wordSplits.end, {
+      yPercent: 60, opacity: 0, duration: 3.2,
+      ease: 'power3.out', stagger: 0.09
+    }, 91);
+    /* pad the tail so the timeline is exactly 100 units — a calm hold
+       after the finale, and unit thresholds stay honest */
+    var pad = 100 - master.duration();
+    if (pad > 0) master.to({ _: 0 }, { _: 1, duration: pad }, master.duration());
+    master.addLabel('end', 100);
+
+    /* label positions as progress ratios, for the snap function */
+    for (var k in master.labels) labelRatios.push(master.labels[k] / master.duration());
+
+    ScrollTrigger.refresh();
+    renderScene();
   }
 
+  function killScene() {
+    if (master) {
+      if (master.scrollTrigger) master.scrollTrigger.kill();
+      master.kill();
+      master = null;
+    }
+    if (lenis) {
+      gsap.ticker.remove(lenisRaf);
+      lenis.destroy();
+      lenis = null;
+    }
+    if (window.gsap) {
+      gsap.killTweensOf('*');
+      var els = [hero, end, tl, node].concat(stations);
+      gsap.set(els, { clearProps: 'all' });
+      if (heroSplit) gsap.set([].concat.apply([], heroSplit), { clearProps: 'all' });
+      if (wordSplits.st) {
+        wordSplits.st.forEach(function (ws) { gsap.set(ws, { clearProps: 'all' }); });
+        gsap.set(wordSplits.end, { clearProps: 'all' });
+      }
+    }
+    [vline, hline, node, ring, yearEl, guy].concat(cards).forEach(function (el) {
+      el.removeAttribute('style');
+    });
+    guy.classList.remove('p-stand', 'p-run', 'p-leap', 'waving');
+    lastPose = '';
+    end.classList.remove('live');
+    prog.style.width = '0';
+  }
+
+  /* flow mode keeps only the progress hairline */
   var ticking = false;
+  function flowFrame() {
+    ticking = false;
+    var max = Math.max(1, document.body.scrollHeight - vh);
+    prog.style.width = (Math.min(1, scrollY / max) * 100) + '%';
+  }
+
   addEventListener('scroll', function () {
-    if (ticking) return;
+    if (inScene() || ticking) return;
     ticking = true;
-    requestAnimationFrame(inScene() ? frame : flowFrame);
+    requestAnimationFrame(flowFrame);
   }, { passive: true });
 
   addEventListener('resize', function () {
     measure();
-    if (inScene()) { placeCards(); frame(); }
+    if (inScene()) {
+      placeCards();
+      if (window.ScrollTrigger) ScrollTrigger.refresh();
+      renderScene();
+    } else {
+      syncFlowGuy();
+    }
   });
 
-  /* ---------- mode switching (viewport / OS setting / user toggle) ---------- */
+  /* ---------- mode switching ---------- */
 
   function setMode() {
     var want = shouldScene();
     if (want === inScene()) return;
-    html.classList.toggle('scene', want);
-    clearInline();
-    scrollTo(0, 0);
-    measure();
-    if (want) { placeCards(); frame(); }
+    if (want) {
+      html.classList.add('scene');
+      scrollTo(0, 0);
+      buildScene();
+    } else {
+      html.classList.remove('scene');
+      killScene();
+      scrollTo(0, 0);
+    }
     syncFlowGuy();
   }
 
   motionQ.addEventListener('change', setMode);
   wideQ.addEventListener('change', setMode);
 
-  /* ---------- flow-mode little Bryan ----------
-     Hops station to station down the left timeline as sections come
-     into view (cheap 2D translate), waves at the contact heading.
-     Reduced motion: a single static standing pose by the contact
-     heading, no animation. */
+  /* ---------- flow-mode little Bryan (unchanged from v3) ---------- */
 
   var flowGuyIO = null;
 
   function guyDockPoint(el) {
-    /* the dot each element attaches to on the timeline */
     var r = el.getBoundingClientRect();
     var dot = el.querySelector('.dot');
     if (dot) {
       var dr = dot.getBoundingClientRect();
       return { x: dr.left + dr.width / 2 + scrollX, y: dr.top + dr.height / 2 + scrollY };
     }
-    /* cards: their ::before dot (10px + 2px border) hangs left of the card */
     var beforeLeft = parseFloat(getComputedStyle(el, '::before').left) || -39;
     return { x: r.left + beforeLeft + 7 + scrollX, y: r.top + 35 + scrollY };
   }
@@ -302,8 +488,6 @@
     var title = document.getElementById('contact-title');
 
     if (!motionQ.matches) {
-      /* reduced motion: static standing pose by the contact heading
-         (the wave keyframe is neutralized by the reduce media block) */
       guy.classList.add('flow-guy');
       moveFlowGuyTo(title, true);
       guy.style.opacity = 1;
@@ -314,7 +498,6 @@
     var stops = stations.concat(cards);
     var first = true;
 
-    /* park him at the first station dot to start */
     moveFlowGuyTo(stations[0], false);
     setPose('stand', false);
     guy.style.opacity = 1;
@@ -323,11 +506,7 @@
       entries.forEach(function (e) {
         if (!e.isIntersecting) return;
         if (first) { first = false; guy.classList.add('hopping'); }
-        if (e.target === title) {
-          moveFlowGuyTo(title, true);
-        } else {
-          moveFlowGuyTo(e.target, false);
-        }
+        moveFlowGuyTo(e.target, e.target === title);
       });
     }, { rootMargin: '-35% 0px -45% 0px' });
 
@@ -335,19 +514,23 @@
     flowGuyIO.observe(title);
   }
 
-  addEventListener('resize', function () {
-    if (!inScene()) syncFlowGuy();
-  });
+  /* ---------- palette bridge ---------- */
 
-  /* exposed for the command palette (phase 3) */
   window.__bw = {
     setMode: setMode,
     inScene: inScene,
-    /* scroll targets: fraction of the runway per phase */
+    /* programmatic scrolling must go through Lenis in scene mode
+       (native scrollTo bypasses it and the two would fight) */
+    scrollToPos: function (pos, opts) {
+      if (lenis) lenis.scrollTo(pos, opts || {});
+      else scrollTo({ top: pos, behavior: 'auto' });
+    },
     jump: function (where) {
-      var map = { top: 0, story: 0.10, work: 0.47, contact: 0.96 };
-      if (inScene()) {
-        scrollTo({ top: map[where] * maxScroll, behavior: 'smooth' });
+      if (inScene() && master && master.scrollTrigger) {
+        var label = { top: 'top', story: 'st0', work: 'card0', contact: 'end' }[where];
+        var pos = master.scrollTrigger.labelToScroll(label);
+        if (lenis) lenis.scrollTo(pos, { duration: 1.4 });
+        else scrollTo({ top: pos, behavior: 'smooth' });
       } else {
         var el = document.getElementById(where === 'top' ? 'top' : where);
         if (el) el.scrollIntoView({ behavior: motionQ.matches ? 'smooth' : 'auto' });
@@ -355,9 +538,13 @@
     }
   };
 
-  /* init */
+  /* ---------- init ---------- */
+
+  /* the pre-paint bootstrap can't know if the CDN loaded; correct it here */
+  if (inScene() && !hasStack()) html.classList.remove('scene');
+
   measure();
-  if (inScene()) { placeCards(); frame(); }
+  if (inScene()) buildScene();
   syncFlowGuy();
 })();
 
