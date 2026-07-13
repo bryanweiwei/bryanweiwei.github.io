@@ -423,14 +423,18 @@
     GL.vTube.geometry.setDrawRange(0, 0);
     GL.group.add(GL.vTube);
 
-    /* branch: a small bend at the corner, then out right, receding */
+    /* branch: a small bend at the corner, then onward — long enough
+       that the camera can dolly along it into the end page and the
+       line never runs out ahead */
+    branchMax = vw * w * 3.6;
     var bPath = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0, hh * 0.045, 0),
       new THREE.Vector3(0.004, hh * 0.008, 0),
       new THREE.Vector3(hh * 0.045, 0, 0.004),
-      new THREE.Vector3(branchMax * 0.55, 0, -0.35),
-      new THREE.Vector3(branchMax * 1.02, 0, -0.8)
+      new THREE.Vector3(branchMax * 0.3, 0, -0.28),
+      new THREE.Vector3(branchMax * 1.0, 0, -0.6)
     ], false, 'catmullrom', 0.12);
+    GL.branchMax = branchMax;
     var bGeo = new THREE.TubeGeometry(bPath, 140, 1.6 * w, 6, false);
     GL.bTube = new THREE.Mesh(bGeo, GL.inkMat);
     GL.bIndexCount = bGeo.index.count;
@@ -520,11 +524,18 @@
     var w = glPx2World();
 
     /* line draw state (same formulas that drive the DOM fallback) */
-    var vFrac = S.grow * (1 - S.retract * 0.5);
+    /* the vertical (and its corner) is left behind as the camera
+       travels on: it pours away in the first stretch of the dolly */
+    var travelCut = Math.min(1, (S.travel || 0) * 2.5);
+    var vFrac = S.grow * (1 - S.retract * 0.5) * (1 - travelCut);
     GL.vTube.geometry.setDrawRange(0, Math.round(GL.vIndexCount * vFrac));
 
-    var branchFrac = (S.elbow * 46 + S.slide * 46) / 94;
-    GL.bTube.geometry.setDrawRange(0, Math.round(GL.bIndexCount * branchFrac));
+    /* once the camera starts traveling, draw the whole tube (the
+       extension appears beyond the right edge, so no visible pop) */
+    var branchFrac = (S.travel || 0) > 0
+      ? 1
+      : ((S.elbow * 46 + S.slide * 46) / 94) * (94 / 360);
+    GL.bTube.geometry.setDrawRange(0, Math.round(GL.bIndexCount * Math.min(1, branchFrac)));
 
     /* the L slides left with the revolve */
     var lxWorld = (-S.slide * 38 / 100) * vw * w;
@@ -540,10 +551,11 @@
       GL.vTube.geometry.setDrawRange(vStart, vCount);
     }
 
-    /* node pop; the corner dissolves as the rule settles */
-    var ns = GL.nodeBase * (0.001 + S.elbow) * Math.max(0.001, 1 - drop);
+    /* node pop; the corner dissolves as the camera leaves it behind */
+    var nodeFade = (1 - drop) * (1 - Math.min(1, (S.travel || 0) * 3));
+    var ns = GL.nodeBase * (0.001 + S.elbow) * Math.max(0.001, nodeFade);
     GL.node.scale.setScalar(ns);
-    GL.node.children[1].material.opacity = 0.25 * S.elbow * (1 - drop);
+    GL.node.children[1].material.opacity = 0.25 * S.elbow * nodeFade;
 
     /* camera: swing around the bend (only during the elbow window),
        plus a breathing dolly during the descent beats */
@@ -553,16 +565,22 @@
       var sfrac = ((p - 10) / 9.5) % 1;
       dolly = 0.45 * Math.sin(Math.PI * sfrac);
     }
-    var pivotX = GL.group.position.x;
-    GL.camera.position.x = pivotX + Math.sin(theta) * 10;
-    GL.camera.position.z = Math.cos(theta) * (10 - dolly);
-    GL.camera.lookAt(pivotX, 0, 0);
+    /* the horizontal dolly: after the last card the camera travels
+       onward along the line, carrying the view into the end page */
+    var camX = (GL.travelPx || 0) * w;
 
-    /* specks drift upward at depth-dependent rates */
+    var pivotX = GL.group.position.x;
+    GL.camera.position.x = pivotX + camX + Math.sin(theta) * 10;
+    GL.camera.position.z = Math.cos(theta) * (10 - dolly);
+    GL.camera.lookAt(pivotX + camX, GL.group.position.y * 0.5, 0);
+
+    /* specks: vertical drift with scroll + horizontal parallax against
+       the dolly (near specks stream past faster than far ones) */
     GL.specks.forEach(function (sp) {
-      var travel = (p / 100) * 7 * sp.userData.rate;
-      sp.position.y = ((travel % 9) + 9) % 9 - 4.5;
-      sp.position.x = (GL.mouseX || 0) * 0.3 * sp.userData.rate;
+      var dv = (p / 100) * 7 * sp.userData.rate;
+      sp.position.y = ((dv % 9) + 9) % 9 - 4.5;
+      sp.position.x = camX * (1 - sp.userData.rate) +
+        (GL.mouseX || 0) * 0.3 * sp.userData.rate;
     });
 
     GL.need = true;
@@ -587,10 +605,11 @@
     /* lines (DOM fallback path; GL owns them when html.scene.gl) */
     var lx = -S.slide * 38;
     var drop = S.lineDrop || 0;
-    vline.style.height = (S.grow * 100 * (1 - S.retract * 0.5) * (1 - drop)) + 'vh';
+    var tcut = Math.min(1, (S.travel || 0) * 2.5);
+    vline.style.height = (S.grow * 100 * (1 - S.retract * 0.5) * (1 - drop) * (1 - tcut)) + 'vh';
     vline.style.marginLeft = lx + 'vw';
     node.style.marginLeft = lx + 'vw';
-    node.style.opacity = Math.min(1, S.elbow) * (1 - drop);
+    node.style.opacity = Math.min(1, S.elbow) * (1 - drop) * (1 - Math.min(1, (S.travel || 0) * 3));
     hline.style.marginLeft = lx + 'vw';
     hline.style.width = (S.elbow * 46 + S.slide * 46) + 'vw';
     hline.style.transform = 'translateY(' + (dropPx * drop - 1) + 'px)';
@@ -601,8 +620,11 @@
     var ringX = Math.max(0, Math.min(vw * 0.18, (vw / 2 - 325) / MAG));
     var u = S.u;
     var shift = u * SPACING;
+    /* during the dolly, cards stream away behind the camera */
+    var travelPx = (S.travel || 0) * 2.2 * vw;
+    if (GL.ready) GL.travelPx = travelPx;
     ring.style.transform =
-      'translateX(' + (-shift + ringX) + 'px) rotateX(' + (-u * STEP) + 'deg)';
+      'translateX(' + (-shift + ringX - travelPx * 0.9) + 'px) rotateX(' + (-u * STEP) + 'deg)';
     ring.style.pointerEvents = S.ringIn > 0 ? 'auto' : 'none';
 
     var front = 0, best = 1e9;
@@ -643,7 +665,7 @@
     var MAGc = 1300 / (1300 - RADIUS);
     var cardTopX = ringX * MAGc - 235;
     var cardTopY = 10.4 - 150 * MAGc - 2;
-    if (p >= 93.2) {
+    if (p >= 90.9) {
       /* waves standing ON the settled line, at the sign-off */
       guy.style.opacity = 1;
       var r = waveAnchor.getBoundingClientRect();
@@ -655,35 +677,46 @@
       gctx.mode = 'wave';
       gctx.y = wy;
       gctx.visible = true;
-    } else if (p >= 88.8) {
-      /* the exit: hop off the card onto the line, sprint along it as
-         it eases down into the final page, arrive at the sign-off */
+    } else if (p >= 80.5) {
+      /* the exit: hop off the card onto the line, then RUN as the
+         camera dollies onward — he holds the left third of the frame
+         while the world streams past — then arrives at the sign-off
+         as the line docks into the end page */
       guy.style.opacity = 1;
       var ra = waveAnchor.getBoundingClientRect();
       dropPx = ra.bottom + 6 - vh / 2;
       if (GL.ready) GL.dropPx = dropPx;
       var tx = ra.left - vw / 2 + 34;
       var lineY = dropPx * (S.lineDrop || 0);  /* the line's current y */
+      var travelPx2 = (S.travel || 0) * 2.2 * vw;
+      var holdX = -vw * 0.16;                  /* his framing during the dolly */
       var gx2, gy2;
-      if (p < 89.9) {
+      if (p < 81.6) {
         /* hop DOWN from the card top to the line */
-        var d = smooth((p - 88.8) / 1.1);
+        var d = smooth((p - 80.5) / 1.1);
         gx2 = cardTopX + 26 * d;
-        gy2 = (cardTopY) * (1 - d) + lineY * d - Math.sin(Math.PI * d) * 26;
+        gy2 = cardTopY * (1 - d) - Math.sin(Math.PI * d) * 26;
         if (CHAR.ready && CHAR.prevDropT < 0.97 && d >= 0.97) fireDust();
         CHAR.prevDropT = d;
         gctx.mode = 'jump';
         gctx.frac = Math.max(0.03, Math.min(0.97, d));
-      } else if (p < 92.5) {
-        /* the sprint, riding the line down as it settles */
-        var rT = smooth((p - 89.9) / 2.6);
-        gx2 = (cardTopX + 26) + (tx - cardTopX - 26) * rT;
+      } else if (p < 88.2) {
+        /* the traveling run: eases into frame-left, world streams by */
+        var fT = smooth((p - 81.6) / 1.6);
+        gx2 = (cardTopX + 26) + (holdX - cardTopX - 26) * fT;
         gy2 = lineY;
         gctx.mode = 'run';
-        gctx.runX = gx2;
+        gctx.runX = travelPx2 + gx2;   /* ground-relative: legs churn with the dolly */
         CHAR.prevDropT = 0;
+      } else if (p < 90.2) {
+        /* arrival: runs the last stretch to the sign-off as the line docks */
+        var rT = smooth((p - 88.2) / 2.0);
+        gx2 = holdX + (tx - holdX) * rT;
+        gy2 = lineY;
+        gctx.mode = 'run';
+        gctx.runX = travelPx2 + gx2;
       } else {
-        /* arrived: settle to a stand as the line finishes docking */
+        /* settle to a stand; the wave takes over at home */
         gx2 = tx;
         gy2 = lineY;
         gctx.mode = 'idle';
@@ -783,7 +816,7 @@
       }
     });
 
-    S = { grow: 0, retract: 0, elbow: 0, slide: 0, u: 0, ringIn: 0, swing: 0, lineDrop: 0 };
+    S = { grow: 0, retract: 0, elbow: 0, slide: 0, u: 0, ringIn: 0, swing: 0, lineDrop: 0, travel: 0 };
 
     initChar();
     guy.classList.remove('p-stand', 'p-run', 'p-leap', 'waving');
@@ -911,24 +944,33 @@
       master.addLabel('card' + i, seg + 6.6);
     }
     /* ghost year drifts slowly upward through the revolve: depth */
-    master.fromTo(yearEl, { y: 36 }, { y: -36, duration: 42, ease: 'none' }, 45);
+    master.fromTo(yearEl, { y: 36 }, { y: -36, duration: 36, ease: 'none' }, 45);
 
-    /* card4 label ≈ 87.1; ring hands off to the finale */
-    master.to(S, { ringIn: 0, duration: 3, ease: 'power1.in' }, 88.5);
-    master.to(tl, { opacity: 0, duration: 2, ease: 'power1.in' }, 88.5);
+    /* after card 5 (label 79.1) the cards stream away behind the
+       traveling camera */
+    master.to(S, { ringIn: 0, duration: 2.5, ease: 'power1.in' }, 80.5);
+    master.to(tl, { opacity: 0, duration: 2, ease: 'power1.in' }, 80.5);
 
-    /* FINALE — calm */
+    /* THE DOLLY: the perspective moves horizontally onward along the
+       line, out of the work and into the end page */
+    master.to(S, { travel: 1, duration: 6, ease: 'power2.inOut' }, 81.6);
+
+    /* FINALE — it arrives with the camera: slides in from the right
+       as the dolly decelerates, like pulling into a station */
     gsap.set(end, { opacity: 0 });
-    master.fromTo(end, { opacity: 0, y: 26 },
-      { opacity: 1, y: 0, duration: 5, ease: 'power2.out' }, 90.5);
+    master.fromTo(end, { opacity: 0, x: '38vw' },
+      { opacity: 1, x: '0vw', duration: 3, ease: 'power3.out' }, 87.2);
     master.from(wordSplits.end, {
-      yPercent: 60, opacity: 0, duration: 3.2,
-      ease: 'power3.out', stagger: 0.09
-    }, 91);
+      yPercent: 60, opacity: 0, duration: 2.6,
+      ease: 'power3.out', stagger: 0.07
+    }, 88.2);
 
     /* the line doesn't leave: it eases down and settles as the
        broadsheet rule under the sign-off, part of the final page */
-    master.to(S, { lineDrop: 1, duration: 3.2, ease: 'power2.inOut' }, 90.2);
+    master.to(S, { lineDrop: 1, duration: 1.8, ease: 'power2.inOut' }, 88.4);
+
+    /* the composed end-page rest point */
+    master.addLabel('home', 90.9);
 
     /* pad the tail so the timeline is exactly 100 units — a calm hold
        after the finale, and unit thresholds stay honest */
