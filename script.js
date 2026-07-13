@@ -57,9 +57,14 @@
     maxScroll = Math.max(1, document.body.scrollHeight - vh);
   }
 
+  var lastPose = '';
   function setPose(pose, waving) {
-    var want = 'p-' + pose + (waving ? ' waving' : '');
-    if (guy.getAttribute('class') !== want) guy.setAttribute('class', want);
+    var want = pose + (waving ? '+w' : '');
+    if (lastPose === want) return;
+    lastPose = want;
+    guy.classList.remove('p-stand', 'p-run', 'p-leap');
+    guy.classList.add('p-' + pose);
+    guy.classList.toggle('waving', !!waving);
   }
 
   function poseForArc(frac) {
@@ -190,8 +195,13 @@
         tilt = Math.sin(Math.PI * 2 * frac) * 6;
         gx = lx * vw / 100 + 10;
       }
+      /* springy landing: brief squash as the feet touch down */
+      var sy = 1;
+      if (frac > 0.8 && frac < 0.98) {
+        sy = 1 - 0.09 * Math.sin(Math.PI * (frac - 0.8) / 0.18);
+      }
       guy.style.transform =
-        'translate(' + gx + 'px,' + (-hop) + 'px) rotate(' + tilt + 'deg)';
+        'translate(' + gx + 'px,' + (-hop) + 'px) rotate(' + tilt + 'deg) scale(1,' + sy + ')';
       setPose(poseForArc(frac), false);
     } else {
       guy.style.opacity = 0;
@@ -228,10 +238,101 @@
     scrollTo(0, 0);
     measure();
     if (want) { placeCards(); frame(); }
+    syncFlowGuy();
   }
 
   motionQ.addEventListener('change', setMode);
   wideQ.addEventListener('change', setMode);
+
+  /* ---------- flow-mode little Bryan ----------
+     Hops station to station down the left timeline as sections come
+     into view (cheap 2D translate), waves at the contact heading.
+     Reduced motion: a single static standing pose by the contact
+     heading, no animation. */
+
+  var flowGuyIO = null;
+
+  function guyDockPoint(el) {
+    /* the dot each element attaches to on the timeline */
+    var r = el.getBoundingClientRect();
+    var dot = el.querySelector('.dot');
+    if (dot) {
+      var dr = dot.getBoundingClientRect();
+      return { x: dr.left + dr.width / 2 + scrollX, y: dr.top + dr.height / 2 + scrollY };
+    }
+    /* cards: their ::before dot (10px + 2px border) hangs left of the card */
+    var beforeLeft = parseFloat(getComputedStyle(el, '::before').left) || -39;
+    return { x: r.left + beforeLeft + 7 + scrollX, y: r.top + 35 + scrollY };
+  }
+
+  function moveFlowGuyTo(el, wave) {
+    var p;
+    if (el.id === 'contact-title') {
+      var r = el.getBoundingClientRect();
+      p = { x: r.left + scrollX + 10, y: r.top + scrollY - 8 };
+      guy.style.transform =
+        'translate(' + (p.x) + 'px,' + (p.y - 50) + 'px)';
+    } else {
+      p = guyDockPoint(el);
+      guy.style.transform =
+        'translate(' + (p.x - 19) + 'px,' + (p.y - 48) + 'px)';
+    }
+    setPose(wave ? 'stand' : 'leap', !!wave);
+    if (!wave) {
+      clearTimeout(moveFlowGuyTo._t);
+      moveFlowGuyTo._t = setTimeout(function () { setPose('stand', false); }, 650);
+    }
+  }
+
+  function teardownFlowGuy() {
+    if (flowGuyIO) { flowGuyIO.disconnect(); flowGuyIO = null; }
+    guy.classList.remove('flow-guy', 'hopping');
+    guy.removeAttribute('style');
+  }
+
+  function syncFlowGuy() {
+    teardownFlowGuy();
+    if (inScene()) return;
+
+    var title = document.getElementById('contact-title');
+
+    if (!motionQ.matches) {
+      /* reduced motion: static standing pose by the contact heading
+         (the wave keyframe is neutralized by the reduce media block) */
+      guy.classList.add('flow-guy');
+      moveFlowGuyTo(title, true);
+      guy.style.opacity = 1;
+      return;
+    }
+
+    guy.classList.add('flow-guy');
+    var stops = stations.concat(cards);
+    var first = true;
+
+    /* park him at the first station dot to start */
+    moveFlowGuyTo(stations[0], false);
+    setPose('stand', false);
+    guy.style.opacity = 1;
+
+    flowGuyIO = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        if (first) { first = false; guy.classList.add('hopping'); }
+        if (e.target === title) {
+          moveFlowGuyTo(title, true);
+        } else {
+          moveFlowGuyTo(e.target, false);
+        }
+      });
+    }, { rootMargin: '-35% 0px -45% 0px' });
+
+    stops.forEach(function (el) { flowGuyIO.observe(el); });
+    flowGuyIO.observe(title);
+  }
+
+  addEventListener('resize', function () {
+    if (!inScene()) syncFlowGuy();
+  });
 
   /* exposed for the command palette (phase 3) */
   window.__bw = {
@@ -252,4 +353,5 @@
   /* init */
   measure();
   if (inScene()) { placeCards(); frame(); }
+  syncFlowGuy();
 })();
