@@ -1,0 +1,45 @@
+# Bryan Wei
+
+> NYU Stern '29 (Business, Technology, and Entrepreneurship). Ships real things for real people. Building from Taipei, New York, and Kuala Lumpur.
+
+Contact: bryan.wei@stern.nyu.edu · https://www.linkedin.com/in/wei-bryan/ · https://github.com/bryanweiwei
+
+## The story, in three cities
+
+- **Taipei (2007–2025):** Grew up around technology, the kind that changes how people live and work. That proximity shaped what feels worth building.
+- **New York (2025–now):** Business, Technology, and Entrepreneurship at NYU Stern. Business student. Builds anyway.
+- **Kuala Lumpur (Summer 2026):** A summer of building from anywhere. Three cities so far. Same habit: find a real person with a real problem, then ship.
+
+## The work, in order
+
+### 01 · AI Middleware (2025) — Case Competition · Salesforce
+
+Built and presented an AI middleware concept as part of a Salesforce case competition focused on the real value firms can deliver clients in the age of AI. The prototype explored how to bridge enterprise data and AI workflows in ways that feel native rather than bolted-on.
+Prototype: https://lovable.dev/projects/fb15d405-ea90-4eda-8a91-824d44908fc8
+Shipped for: a judging panel that pushed back.
+
+### 02 · Empire Health Labs (2025) — Healthcare Consulting
+
+Helping shape a consulting startup advising healthcare companies on how to navigate AI. Leads competitive analysis, scopes service packages, and coordinates outreach and content, recently shipping research articles twice a week to build credibility in the space.
+Shipped for: a real founder · live site.
+
+### 03 · Velric Outreach (2026) — B2B Growth
+
+Joined the growth team to take an AI-optimized recruiting product to HR departments at tech and healthcare companies. Reached 50+ teams, drafted service agreements, and learned how to turn cold LinkedIn touches into warm executive conversations.
+Shipped for: a growth team with a quota.
+
+### 04 · BowlDrop (2026) — In Development · NYU
+
+Building a platform for NYU students with leftover meal plan swipes to share them with classmates who'd use them. Currently scoping the product, working through the on-campus logistics, and figuring out how to launch it without getting in trouble with dining services.
+Shipped for: hungry classmates (soon).
+
+### 05 · VOINOSIS U.S. Entry (2026) — Technical Fellow · Healthcare AI
+
+Technical seat on a four-person team that drove the U.S. expansion of VOINOSIS, a Korean healthcare-AI startup whose engine screens for early cognitive decline from 2 to 3 minutes of speech using acoustic (non-language) analysis. Mapped the U.S. competitive landscape and profiled the closest voice-based rival to sharpen positioning, contributed HIPAA and data-compliance recommendations for a Mount Sinai clinical pilot, and built a U.S. hiring plan for entry-level technical roles covering sourcing, compensation, and visa pathways. The fellowship wrapped in July 2026 with both final deliverables submitted to the CEO.
+Shipped for: a hospital + a CEO.
+
+## Stats
+
+- 3 cities shipped from
+- 5+ real builds
+- 1 hospital pilot informed

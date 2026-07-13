@@ -738,7 +738,10 @@ html.scene #guy {
   background: var(--mint);
 }
 
-#palette-list li.sel::before { content: "→ "; color: var(--pop-deep); }
+#palette-list li.sel span:first-child::before {
+  content: "→ ";
+  color: var(--pop-deep);
+}
 
 /* ---------- 11. Keyframes (used only in scene/motion contexts) ---------- */
 

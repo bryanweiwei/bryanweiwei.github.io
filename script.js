@@ -355,3 +355,256 @@
   if (inScene()) { placeCards(); frame(); }
   syncFlowGuy();
 })();
+
+/* ============================================================
+   Feature layer: command palette, GitHub strip, copy-as-markdown
+   ============================================================ */
+
+(function () {
+  'use strict';
+
+  var isMac = /Mac|iP(hone|ad|od)/.test(navigator.platform);
+
+  /* ---------- copy helpers ---------- */
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function (resolve, reject) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy') ? resolve() : reject(); }
+      catch (e) { reject(e); }
+      document.body.removeChild(ta);
+    });
+  }
+
+  /* Markdown mirror of the page (kept in sync with llms.txt by hand;
+     no build step to generate one from the other). */
+  var PAGE_MD = [
+    '# Bryan Wei',
+    '',
+    '> NYU Stern \'29 (Business, Technology, and Entrepreneurship). Ships real things for real people. Building from Taipei, New York, and Kuala Lumpur.',
+    '',
+    'Contact: bryan.wei@stern.nyu.edu · https://www.linkedin.com/in/wei-bryan/',
+    '',
+    '## The story, in three cities',
+    '',
+    '- **Taipei (2007–2025):** Grew up around technology, the kind that changes how people live and work. That proximity shaped what feels worth building.',
+    '- **New York (2025–now):** Business, Technology, and Entrepreneurship at NYU Stern. Business student. Builds anyway.',
+    '- **Kuala Lumpur (Summer 2026):** A summer of building from anywhere. Three cities so far. Same habit: find a real person with a real problem, then ship.',
+    '',
+    '## The work, in order',
+    ''
+  ];
+
+  document.querySelectorAll('#ring .card').forEach(function (c) {
+    var title = c.querySelector('h3').textContent;
+    var no = c.querySelector('.no').textContent;
+    var tag = c.querySelector('.tag').textContent;
+    var body = c.querySelector('h3 + p').textContent;
+    var link = c.querySelector('.card-link a');
+    var forLine = c.querySelector('.for').textContent;
+    PAGE_MD.push('### ' + no + ' · ' + title + ' — ' + tag, '', body);
+    if (link) PAGE_MD.push('Prototype: ' + link.href);
+    PAGE_MD.push(forLine + '.', '');
+  });
+
+  PAGE_MD.push('## Stats', '', '- 3 cities shipped from', '- 5+ real builds', '- 1 hospital pilot informed', '');
+
+  var copyBtn = document.getElementById('copy-md');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', function () {
+      copyText(PAGE_MD.join('\n')).then(function () {
+        copyBtn.textContent = 'Copied ✓';
+        setTimeout(function () { copyBtn.textContent = 'Copy this page as Markdown'; }, 1800);
+      }, function () {
+        copyBtn.textContent = 'Copy failed';
+        setTimeout(function () { copyBtn.textContent = 'Copy this page as Markdown'; }, 1800);
+      });
+    });
+  }
+
+  /* ---------- GitHub activity strip ---------- */
+
+  (function github() {
+    var box = document.getElementById('gh');
+    var list = document.getElementById('gh-list');
+    if (!box || !list) return;
+
+    function rel(iso) {
+      var s = (Date.now() - new Date(iso).getTime()) / 1000;
+      if (s < 3600) return Math.max(1, Math.round(s / 60)) + 'm ago';
+      if (s < 86400) return Math.round(s / 3600) + 'h ago';
+      return Math.round(s / 86400) + 'd ago';
+    }
+
+    function phrase(ev) {
+      var repo = ev.repo ? ev.repo.name : '';
+      switch (ev.type) {
+        case 'PushEvent':
+          var n = ev.payload && ev.payload.commits ? ev.payload.commits.length : 1;
+          return 'Pushed ' + n + ' commit' + (n === 1 ? '' : 's') + ' to <b>' + repo + '</b>';
+        case 'CreateEvent':
+          return 'Created ' + (ev.payload ? ev.payload.ref_type : 'repo') + ' in <b>' + repo + '</b>';
+        case 'PullRequestEvent':
+          return (ev.payload && ev.payload.action === 'closed' ? 'Merged' : 'Opened') + ' a pull request in <b>' + repo + '</b>';
+        case 'IssuesEvent':
+          return 'Issue activity in <b>' + repo + '</b>';
+        case 'WatchEvent':
+          return 'Starred <b>' + repo + '</b>';
+        case 'ForkEvent':
+          return 'Forked <b>' + repo + '</b>';
+        case 'ReleaseEvent':
+          return 'Published a release in <b>' + repo + '</b>';
+        default:
+          return 'Activity in <b>' + repo + '</b>';
+      }
+    }
+
+    function render(events) {
+      var seen = [];
+      events.some(function (ev) {
+        var p = phrase(ev);
+        if (seen.some(function (s) { return s.p === p; })) return false;
+        seen.push({ p: p, t: ev.created_at });
+        return seen.length >= 4;
+      });
+      if (!seen.length) return;
+      list.innerHTML = seen.map(function (s) {
+        return '<li>' + s.p + ' · ' + rel(s.t) + '</li>';
+      }).join('');
+      box.hidden = false;
+    }
+
+    try {
+      var cached = sessionStorage.getItem('bw-gh');
+      if (cached) {
+        var c = JSON.parse(cached);
+        if (Date.now() - c.at < 30 * 60 * 1000) { render(c.events); return; }
+      }
+    } catch (e) { /* fall through to fetch */ }
+
+    fetch('https://api.github.com/users/bryanweiwei/events/public')
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (events) {
+        if (!Array.isArray(events)) return;
+        try {
+          sessionStorage.setItem('bw-gh', JSON.stringify({ at: Date.now(), events: events.slice(0, 12) }));
+        } catch (e) { /* cache is best-effort */ }
+        render(events);
+      })
+      .catch(function () { /* strip stays hidden */ });
+  })();
+
+  /* ---------- command palette ---------- */
+
+  var palette = document.getElementById('palette');
+  var input = document.getElementById('palette-input');
+  var listEl = document.getElementById('palette-list');
+  var btn = document.getElementById('pal-btn');
+  var keyLabel = document.getElementById('pal-key');
+  if (!palette || !input || !listEl) return;
+
+  if (keyLabel && isMac) keyLabel.textContent = '⌘K';
+
+  function motionOff() {
+    try { return localStorage.getItem('bw-motion') === 'off'; } catch (e) { return false; }
+  }
+
+  function ACTIONS() {
+    return [
+      { label: 'Jump to top', hint: 'Jump', run: function () { window.__bw.jump('top'); } },
+      { label: 'Jump to the story', hint: 'Jump', run: function () { window.__bw.jump('story'); } },
+      { label: 'Jump to the work', hint: 'Jump', run: function () { window.__bw.jump('work'); } },
+      { label: 'Jump to contact', hint: 'Jump', run: function () { window.__bw.jump('contact'); } },
+      { label: 'Copy email address', hint: 'Copy', run: function () { copyText('bryan.wei@stern.nyu.edu'); } },
+      { label: 'Copy this page as Markdown', hint: 'Copy', run: function () { copyText(PAGE_MD.join('\n')); } },
+      {
+        label: motionOff() ? 'Turn the scroll experience on' : 'Turn the scroll experience off',
+        hint: 'Toggle',
+        run: function () {
+          try { localStorage.setItem('bw-motion', motionOff() ? 'on' : 'off'); } catch (e) {}
+          window.__bw.setMode();
+        }
+      },
+      { label: 'Open GitHub profile', hint: 'Open', run: function () { open('https://github.com/bryanweiwei', '_blank', 'noopener'); } },
+      { label: 'Open LinkedIn', hint: 'Open', run: function () { open('https://www.linkedin.com/in/wei-bryan/', '_blank', 'noopener'); } }
+    ];
+  }
+
+  var current = [], sel = 0, lastFocus = null;
+
+  function renderList() {
+    var q = input.value.trim().toLowerCase();
+    current = ACTIONS().filter(function (a) {
+      return !q || a.label.toLowerCase().indexOf(q) !== -1;
+    });
+    sel = Math.min(sel, Math.max(0, current.length - 1));
+    listEl.innerHTML = current.map(function (a, i) {
+      return '<li role="option" data-i="' + i + '"' +
+        (i === sel ? ' class="sel" aria-selected="true"' : ' aria-selected="false"') +
+        '><span>' + a.label + '</span><span class="hintk">' + a.hint + '</span></li>';
+    }).join('');
+  }
+
+  function openPal() {
+    lastFocus = document.activeElement;
+    palette.hidden = false;
+    input.value = '';
+    sel = 0;
+    renderList();
+    input.focus();
+  }
+
+  function closePal() {
+    palette.hidden = true;
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+
+  function runSel() {
+    if (!current[sel]) return;
+    var action = current[sel];
+    closePal();
+    action.run();
+  }
+
+  addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      palette.hidden ? openPal() : closePal();
+      return;
+    }
+    if (palette.hidden) return;
+    if (e.key === 'Escape') { e.preventDefault(); closePal(); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); sel = Math.min(sel + 1, current.length - 1); renderList(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); sel = Math.max(sel - 1, 0); renderList(); }
+    else if (e.key === 'Enter') { e.preventDefault(); runSel(); }
+  });
+
+  input.addEventListener('input', function () { sel = 0; renderList(); });
+
+  listEl.addEventListener('click', function (e) {
+    var li = e.target.closest('li');
+    if (!li) return;
+    sel = +li.dataset.i;
+    runSel();
+  });
+
+  listEl.addEventListener('mousemove', function (e) {
+    var li = e.target.closest('li');
+    if (!li || +li.dataset.i === sel) return;
+    sel = +li.dataset.i;
+    renderList();
+  });
+
+  document.getElementById('palette-backdrop')
+    .addEventListener('click', closePal);
+
+  if (btn) btn.addEventListener('click', openPal);
+})();
