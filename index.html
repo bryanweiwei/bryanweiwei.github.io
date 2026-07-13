@@ -3,230 +3,205 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bryan Wei — Building in the Age of AI</title>
-<meta name="description" content="Bryan Wei is a sophomore at NYU Stern studying Business, Technology, and Entrepreneurship. Building at the intersection of business and AI, and most drawn to tech, startups, and venture.">
+<title>Bryan Wei · Ships Real Things for Real People</title>
+<meta name="description" content="Bryan Wei ships real things for real people. NYU Stern '29, building from Taipei, New York, and Kuala Lumpur: five real builds so far, including work that informed a hospital AI pilot.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script>
-  // Set before first paint so load-choreography styles only apply when JS + motion are available.
-  document.documentElement.classList.add('js');
-  if (matchMedia('(prefers-reduced-motion: no-preference)').matches) {
-    document.documentElement.classList.add('js-motion');
-  }
+  // Mode bootstrap, pre-paint. Default is the static flow layout;
+  // the fixed-scene experience is opted INTO only when everything allows it.
+  (function () {
+    var d = document.documentElement;
+    d.classList.add('js');
+    var motionOk = matchMedia('(prefers-reduced-motion: no-preference)').matches;
+    var wide = matchMedia('(min-width: 760px)').matches;
+    var userOff = false;
+    try { userOff = localStorage.getItem('bw-motion') === 'off'; } catch (e) {}
+    if (motionOk && wide && !userOff) d.classList.add('scene');
+  })();
 </script>
 <script src="script.js" defer></script>
 </head>
 <body>
 
-<div class="scroll-progress" aria-hidden="true"></div>
+<div id="progress" aria-hidden="true"></div>
 
 <a class="skip-link" href="#main">Skip to content</a>
 
-<div class="container">
+<nav aria-label="Primary">
+  <a class="logo" href="#top">Bryan Wei</a>
+  <button id="pal-btn" class="k-chip js-only" type="button" aria-haspopup="dialog">
+    <span id="pal-key">Ctrl K</span>
+  </button>
+</nav>
 
-  <nav aria-label="Primary">
-    <a class="logo" href="#top">
-      <span class="logo-mark"></span>
-      Bryan <em>Wei</em>
-    </a>
-    <ul class="nav-links">
-      <li><a href="#about">About</a></li>
-      <li><a href="#projects">Work</a></li>
-      <li><a href="#skills">Skills</a></li>
-      <li><a href="#contact">Contact</a></li>
-    </ul>
-  </nav>
-
-  <header class="hero" id="top">
-    <p class="hero-eyebrow">Bryan Wei · NYU Stern '29</p>
-    <h1>
-      <span class="sr-only">Building things in the age of AI.</span>
-      <span class="h1-mask" aria-hidden="true"><span class="h1-line">Building things</span></span>
-      <span class="h1-mask" aria-hidden="true"><span class="h1-line h1-line-2">in the age of <em><span class="underlined">AI<svg class="squiggle" viewBox="0 0 200 14" preserveAspectRatio="none" focusable="false" aria-hidden="true"><path d="M2,8 Q50,2 100,7 T198,6"/></svg></span></em>.</span></span>
-    </h1>
-    <div class="hero-foot">
-      <div class="hero-meta">
-        <span class="pill">Taipei → New York</span>
-        <a href="#projects" class="arrow-link">See the work →</a>
-      </div>
-      <div class="headshot-wrap">
-        <img src="images/headshot.jpg" width="600" height="742" fetchpriority="high" alt="Headshot of Bryan Wei, smiling, casual professional portrait">
-        <div class="headshot-tag">that's me</div>
-      </div>
-    </div>
-  </header>
-
+<div id="scene" aria-hidden="true">
+  <div id="vline"></div>
+  <div id="hline"></div>
+  <div id="node"></div>
 </div>
 
 <main id="main">
 
-<div class="container">
+<header id="top" class="hero">
+  <p class="eyebrow">Bryan Wei · NYU Stern '29</p>
+  <h1>
+    <span class="row"><span class="rise">Ships real</span></span>
+    <span class="row"><span class="rise">things for</span></span>
+    <span class="row"><span class="rise"><em>real people.</em></span></span>
+  </h1>
+  <p class="hint" aria-hidden="true">Scroll · follow the line down</p>
+</header>
 
-  <section id="about" aria-labelledby="about-title">
-    <div class="section-header reveal">
-      <span class="section-num" aria-hidden="true">i.</span>
-      <h2 id="about-title">A little <em>about me.</em></h2>
-    </div>
-    <div class="about-grid">
-      <div class="about-text reveal">
-        <p>I'm Bryan, originally from Taipei and now in New York studying Business, Technology, and Entrepreneurship at NYU Stern. I grew up around technology that genuinely changes how people live and work, and that proximity shaped how I think about what's worth building.</p>
-        <p>Right now I build at the intersection of business and AI: what it actually takes to turn a model into a tool people rely on, and how businesses adapt when the underlying assumptions shift. I've been getting that experience hands-on, working the technical seat on a healthcare-AI startup's U.S. expansion, shaping service offerings at a healthcare consulting startup, running B2B outreach at a recruiting platform, and competing in case work that's landed in front of teams at companies like Salesforce.</p>
-        <p>I'm most drawn to tech, startups, and venture, with product still on the table. If you're working on something interesting, I'd love to hear about it.</p>
-      </div>
-      <aside class="about-aside reveal">
-        <h3>Currently</h3>
-        <ul>
-          <li>School <span>NYU Stern</span></li>
-          <li>Studying <span>BTE</span></li>
-          <li>Based in <span>NYC</span></li>
-          <li>From <span>Taipei</span></li>
-          <li>Drawn to <span>Tech · Startups · VC</span></li>
-        </ul>
-      </aside>
-    </div>
-  </section>
+<section id="story" aria-labelledby="story-title">
+  <h2 id="story-title" class="sr-only">The story, in three cities</h2>
 
-  <section id="projects" aria-labelledby="projects-title">
-    <div class="section-header reveal">
-      <span class="section-num" aria-hidden="true">ii.</span>
-      <h2 id="projects-title">Selected <em>work.</em></h2>
+  <div class="station left" data-i="0">
+    <span class="dot" aria-hidden="true"></span>
+    <div class="txt">
+      <p class="k">Station i · Taipei</p>
+      <h3>Grew up around <em>technology.</em></h3>
+      <p>The kind that changes how people live and work. That proximity shaped what feels worth building.</p>
+      <p class="yr">2007–2025</p>
     </div>
+  </div>
 
-    <article class="project reveal">
-      <div class="project-num" aria-hidden="true">01</div>
-      <div class="project-content">
-        <p class="project-meta">Technical Fellow · NYU Stern AIIA Technical Fellowship</p>
-        <h3>VOINOSIS <em>U.S. Market Entry</em></h3>
-        <p>Technical seat on a four-person team driving the U.S. expansion of VOINOSIS, a Korean healthcare-AI startup whose engine screens for early cognitive decline from 2 to 3 minutes of speech using acoustic (non-language) analysis. I mapped the U.S. competitive landscape and profiled the closest voice-based rival to sharpen positioning, contributed HIPAA and data-compliance recommendations for a Mount Sinai clinical pilot, and am building a U.S. hiring plan for entry-level technical roles covering sourcing, compensation, and visa pathways.</p>
-        <a class="project-link" href="#contact">Ask me about it →</a>
-      </div>
-      <a class="project-figure figure-plate" href="https://voinosis.com/" target="_blank" rel="noopener" aria-label="Visit the VOINOSIS website">
-        <img src="images/voinosis-logo.png" width="500" height="144" loading="lazy" decoding="async" alt="VOINOSIS logo">
-      </a>
+  <div class="station right" data-i="1">
+    <span class="dot" aria-hidden="true"></span>
+    <div class="txt">
+      <p class="k">Station ii · New York</p>
+      <h3>Stern by day, <em>shipping by night.</em></h3>
+      <p>Business, Technology, and Entrepreneurship at NYU Stern. Business student. Builds anyway.</p>
+      <p class="yr">2025–now</p>
+    </div>
+  </div>
+
+  <div class="station left" data-i="2">
+    <span class="dot" aria-hidden="true"></span>
+    <div class="txt">
+      <p class="k">Station iii · Kuala Lumpur</p>
+      <h3>A summer of building <em>from anywhere.</em></h3>
+      <p>Three cities so far. Same habit: find a real person with a real problem, then ship.</p>
+      <p class="yr">Summer 2026</p>
+    </div>
+  </div>
+</section>
+
+<section id="work" aria-labelledby="work-title">
+  <h2 id="work-title" class="sr-only">The work, in order</h2>
+
+  <div id="ring">
+    <article class="card">
+      <p class="no" aria-hidden="true">01</p>
+      <p class="tag">Case Competition · Salesforce</p>
+      <h3>AI <em>Middleware</em></h3>
+      <p>Built and presented an AI middleware concept as part of a Salesforce case competition focused on the real value firms can deliver clients in the age of AI. The prototype explored how to bridge enterprise data and AI workflows in ways that feel native rather than bolted-on.</p>
+      <p class="card-link"><a href="https://lovable.dev/projects/fb15d405-ea90-4eda-8a91-824d44908fc8" target="_blank" rel="noopener">View prototype ↗</a></p>
+      <p class="for">Shipped for: a judging panel that pushed back</p>
     </article>
 
-    <article class="project reveal">
-      <div class="project-num" aria-hidden="true">02</div>
-      <div class="project-content">
-        <p class="project-meta">Case Competition · Salesforce</p>
-        <h3>AI Middleware <em>Prototype</em></h3>
-        <p>Built and presented an AI middleware concept as part of a Salesforce case competition focused on the real value firms can deliver clients in the age of AI. The prototype explored how to bridge enterprise data and AI workflows in ways that feel native rather than bolted-on.</p>
-        <a class="project-link" href="https://lovable.dev/projects/fb15d405-ea90-4eda-8a91-824d44908fc8" target="_blank" rel="noopener">View prototype →</a>
-      </div>
-      <figure class="project-figure figure-wide">
-        <img src="images/project-1.jpg" width="800" height="415" loading="lazy" decoding="async" alt="MedAssist clinical portal interface with a Salesforce-powered governance audit trail showing live PHI masking and compliance checks">
-      </figure>
+    <article class="card">
+      <p class="no" aria-hidden="true">02</p>
+      <p class="tag">Healthcare Consulting</p>
+      <h3>Empire <em>Health Labs</em></h3>
+      <p>Helping shape a consulting startup advising healthcare companies on how to navigate AI. I lead competitive analysis, scope service packages, and coordinate outreach and content, recently shipping research articles twice a week to build credibility in the space.</p>
+      <p class="for">Shipped for: a real founder · live site</p>
     </article>
 
-    <article class="project reveal">
-      <div class="project-num" aria-hidden="true">03</div>
-      <div class="project-content">
-        <p class="project-meta">Product Manager · Empire Health Labs</p>
-        <h3>Healthcare Consulting <em>in the Age of AI</em></h3>
-        <p>Helping shape a consulting startup advising healthcare companies on how to navigate AI. I lead competitive analysis, scope service packages, and coordinate outreach and content — recently shipping research articles twice a week to build credibility in the space.</p>
-        <a class="project-link" href="#contact">Ask me about it →</a>
-      </div>
-      <figure class="project-figure figure-portrait">
-        <img src="images/project-2.jpg" width="530" height="755" loading="lazy" decoding="async" alt="Empire Health Labs publication cover titled The Power of One Story, with a figure facing branching paths of light">
-      </figure>
+    <article class="card">
+      <p class="no" aria-hidden="true">03</p>
+      <p class="tag">B2B Growth</p>
+      <h3>Velric <em>Outreach</em></h3>
+      <p>Joined the growth team to take an AI-optimized recruiting product to HR departments at tech and healthcare companies. Reached 50+ teams, drafted service agreements, and learned how to turn cold LinkedIn touches into warm executive conversations.</p>
+      <p class="for">Shipped for: a growth team with a quota</p>
     </article>
 
-    <article class="project reveal">
-      <div class="project-num" aria-hidden="true">04</div>
-      <div class="project-content">
-        <p class="project-meta">B2B Growth · Velric</p>
-        <h3>Velric Enterprise <em>Recruiting</em></h3>
-        <p>Joined the growth team to take an AI-optimized recruiting product to HR departments at tech and healthcare companies. Reached 50+ teams, drafted service agreements, and learned how to turn cold LinkedIn touches into warm executive conversations.</p>
-        <a class="project-link" href="#contact">Ask me about it →</a>
-      </div>
-      <figure class="project-figure figure-wide">
-        <img src="images/project-3.jpg" width="800" height="339" loading="lazy" decoding="async" alt="Velric marketing page showing three problems with traditional recruiting: resume inflation, buried applicants, and premature interviews">
-      </figure>
+    <article class="card">
+      <p class="no" aria-hidden="true">04</p>
+      <p class="tag">In Development · NYU</p>
+      <h3>Bowl<em>Drop</em></h3>
+      <p>Building a platform for NYU students with leftover meal plan swipes to share them with classmates who'd use them. Currently scoping the product, working through the on-campus logistics, and figuring out how to launch it without getting in trouble with dining services.</p>
+      <p class="for">Shipped for: hungry classmates (soon)</p>
     </article>
 
-    <article class="project reveal">
-      <div class="project-num" aria-hidden="true">05</div>
-      <div class="project-content">
-        <p class="project-meta">In Development · NYU</p>
-        <h3>Meal-Sharing <em>for NYU Students</em></h3>
-        <p>Building a platform for NYU students with leftover meal plan swipes to share them with classmates who'd use them. Currently scoping the product, working through the on-campus logistics, and figuring out how to launch it without getting in trouble with dining services.</p>
-        <a class="project-link" href="#contact">Follow along →</a>
-      </div>
-      <figure class="project-figure figure-portrait">
-        <img src="images/project-4.jpg" class="plate-tall" width="542" height="995" loading="lazy" decoding="async" alt="BowlDrop mobile app mockup showing open meal orders for NYU students with bid prices and a Grab This Order action">
-      </figure>
+    <article class="card">
+      <p class="no" aria-hidden="true">05</p>
+      <p class="tag">Technical Fellow · Healthcare AI</p>
+      <h3>VOINOSIS <em>U.S. Entry</em></h3>
+      <p>Technical seat on a four-person team that drove the U.S. expansion of VOINOSIS, a Korean healthcare-AI startup whose engine screens for early cognitive decline from 2 to 3 minutes of speech using acoustic (non-language) analysis. I mapped the U.S. competitive landscape and profiled the closest voice-based rival to sharpen positioning, contributed HIPAA and data-compliance recommendations for a Mount Sinai clinical pilot, and built a U.S. hiring plan for entry-level technical roles covering sourcing, compensation, and visa pathways. The fellowship wrapped in July 2026 with both final deliverables submitted to the CEO.</p>
+      <p class="for">Shipped for: a hospital + a CEO</p>
     </article>
-  </section>
+  </div>
+</section>
 
-  <section id="skills" aria-labelledby="skills-title">
-    <div class="section-header reveal">
-      <span class="section-num" aria-hidden="true">iii.</span>
-      <h2 id="skills-title">What I bring <em>to a team.</em></h2>
-    </div>
-    <p class="skills-intro reveal">A mix of product instinct, business development chops, and enough technical fluency to actually build the thing.</p>
-    <div class="skills-grid">
-      <div class="skill-group reveal">
-        <h3><span class="num" aria-hidden="true">01</span> Product &amp; Strategy</h3>
-        <ul>
-          <li>Product thinking</li>
-          <li>Competitive analysis</li>
-          <li>Market research</li>
-          <li>Roadmap scoping</li>
-        </ul>
-      </div>
-      <div class="skill-group reveal">
-        <h3><span class="num" aria-hidden="true">02</span> Business Development</h3>
-        <ul>
-          <li>B2B outreach</li>
-          <li>Service agreements</li>
-          <li>Executive communication</li>
-          <li>LinkedIn growth</li>
-        </ul>
-      </div>
-      <div class="skill-group reveal">
-        <h3><span class="num" aria-hidden="true">03</span> Technical</h3>
-        <ul>
-          <li>Python</li>
-          <li>SQL (PostgreSQL)</li>
-          <li>HTML / CSS</li>
-          <li>AI tooling &amp; prompting</li>
-          <li>Rapid prototyping</li>
-        </ul>
-      </div>
-      <div class="skill-group reveal">
-        <h3><span class="num" aria-hidden="true">04</span> Languages</h3>
-        <ul>
-          <li>English (fluent)</li>
-          <li>Mandarin (fluent)</li>
-        </ul>
-      </div>
-    </div>
-  </section>
+<div id="tl" aria-hidden="true"><p class="k">The line turns</p><p class="tl-title">the work, in order</p></div>
+<div id="year" aria-hidden="true">2025</div>
 
+<div id="guy" aria-hidden="true">
+  <svg viewBox="0 0 40 52" focusable="false">
+    <g class="pose" id="pose-stand">
+      <circle class="head" cx="20" cy="8" r="5.5"/>
+      <path class="scarf" d="M16 14 Q10 16 7 12"/>
+      <path class="stroke" d="M20 14 L20 30"/>
+      <path class="stroke" d="M20 19 L12 26"/>
+      <path class="stroke" id="wave-arm" d="M20 19 L29 14"/>
+      <path class="stroke" d="M20 30 L15 44 M20 30 L25 44"/>
+    </g>
+    <g class="pose" id="pose-run">
+      <circle class="head" cx="21" cy="8" r="5.5"/>
+      <path class="scarf" d="M17 14 Q10 14 6 10"/>
+      <path class="stroke" d="M21 14 L19 30"/>
+      <path class="stroke" d="M20 19 L11 23"/>
+      <path class="stroke" d="M20 19 L30 17"/>
+      <path class="stroke" d="M19 30 L8 36 M19 30 L28 38 L26 46"/>
+    </g>
+    <g class="pose" id="pose-leap">
+      <circle class="head" cx="22" cy="7" r="5.5"/>
+      <path class="scarf" d="M18 13 Q9 12 4 7"/>
+      <path class="stroke" d="M22 13 L19 28"/>
+      <path class="stroke" d="M21 17 L12 12"/>
+      <path class="stroke" d="M21 17 L31 11"/>
+      <path class="stroke" d="M19 28 L7 30 M19 28 L30 32 L36 27"/>
+    </g>
+  </svg>
 </div>
 
-  <section id="contact" aria-labelledby="contact-title" class="contact-band">
-    <div class="container">
-      <div class="contact-inner reveal">
-        <p class="contact-eyebrow"><span class="section-num" aria-hidden="true">iv.</span> — let's talk —</p>
-        <h2 id="contact-title">Working on something <em>interesting?</em></h2>
-        <p>I'm most drawn to tech, startups, and venture, and I always have time for a coffee with someone building something good.</p>
-        <div class="contact-links">
-          <a class="btn btn-primary" href="mailto:bryan.wei@stern.nyu.edu">Email me →</a>
-          <a class="btn btn-secondary" href="https://www.linkedin.com/in/wei-bryan/" target="_blank" rel="noopener">LinkedIn</a>
-        </div>
+<section id="contact" aria-labelledby="contact-title">
+  <div id="end-inner">
+    <h2 id="contact-title">Working on<br>something interesting? <a href="mailto:bryan.wei@stern.nyu.edu">Say hi.</a><span id="wave-anchor" aria-hidden="true"></span></h2>
+    <div class="row2">
+      <div class="stats">
+        <div><b>3</b><span>cities shipped from</span></div>
+        <div><b>5+</b><span>real builds</span></div>
+        <div><b>1</b><span>hospital pilot informed</span></div>
       </div>
-      <footer>
-        <div>© 2026 Bryan Wei</div>
-        <div class="made-with">made with care in NYC</div>
-      </footer>
+      <div class="contact-meta">
+        <p><a href="mailto:bryan.wei@stern.nyu.edu">bryan.wei@stern.nyu.edu</a> · <a href="https://www.linkedin.com/in/wei-bryan/" target="_blank" rel="noopener">linkedin.com/in/wei-bryan</a></p>
+        <p><button id="copy-md" class="k-chip js-only" type="button">Copy this page as Markdown</button></p>
+        <p class="joke">the color is mint chip, and yes it's the ice cream</p>
+      </div>
     </div>
-  </section>
+    <div id="gh" hidden>
+      <p class="k">Recently on GitHub</p>
+      <ul id="gh-list"></ul>
+    </div>
+  </div>
+</section>
 
 </main>
+
+<div id="runway" aria-hidden="true"></div>
+
+<div id="palette" hidden>
+  <div id="palette-backdrop"></div>
+  <div id="palette-box" role="dialog" aria-modal="true" aria-label="Command palette">
+    <input id="palette-input" type="text" placeholder="Type a command…" autocomplete="off" spellcheck="false" aria-label="Search commands">
+    <ul id="palette-list" role="listbox" aria-label="Commands"></ul>
+  </div>
+</div>
 
 </body>
 </html>
