@@ -1,67 +1,124 @@
-# Redesign v3 "Broadsheet Helix" — build notes
+# Redesign v4 "Broadsheet Helix, Cinematic Cut" — build notes
 
-Built overnight per PRD-v3.md on branch `redesign-v3` (off `redesign-v2`). Main untouched;
-nothing is live. Four commits: core scene, little Bryan, feature layer, QA.
+Branch `redesign-v4` (off `redesign-v3`). Main untouched; nothing is live.
+Built phase-by-phase with checkpoints per PRD-v4; Bryan reviewed and steered
+after every phase (A feel → B depth → C character → D polish).
 
-## What you're looking at
+## The stack (the "$20k ingredients")
 
-The site is now the mockup-d experience with real content:
+All pinned, loaded from CDNs, no build step:
 
-- **Hero:** giant uppercase Fraunces "SHIPS REAL THINGS FOR *real people.*", line-by-line rise.
-- **Descent:** the ink line runs down the screen; Taipei / New York / Kuala Lumpur stations ride past, alternating sides. Little Bryan hops the line between them.
-- **Elbow:** green node lights, the line turns horizontal, "the work, in order".
-- **Revolve:** five ink-bordered cards revolve around the line in chronological order, each easing to a stop facing front (scroll-driven, with dwell so cards settle rather than drift). Ghost year bottom-right tracks the front card. Back cards keep a 0.45 opacity floor, no blur or desaturation.
-- **Finale:** loud "WORKING ON SOMETHING INTERESTING? SAY HI.", stats band, GitHub activity strip, the mint-chip line. Little Bryan stands on the headline baseline and waves.
-- **Features:** Ctrl+K / Cmd+K command palette (jump, copy email, copy page as Markdown, toggle the scroll experience on/off), live GitHub strip, `llms.txt`.
-- **Mobile (<760px) and no-JS:** a designed vertical timeline (ink line down the left, stations and cards docked to it, little Bryan hops down it and waves at the bottom). **Reduced motion:** same layout, fully static, little Bryan in a single standing pose. These aren't afterthoughts; the static flow layout is the default and the scene is opted into.
+- **Lenis 1.3.4** (jsdelivr) — weighted, inertial scrolling. Integrated with
+  ScrollTrigger via `scrollerProxy` so the two never fight over scroll position.
+- **GSAP 3.13.0 + ScrollTrigger** (cdnjs) — every scroll behavior lives on one
+  master scrubbed timeline (100 authored units) with real easing per beat and
+  snap-to-composition (nearest-label, computed from actual progress, because
+  ScrollTrigger's velocity projection flings hard flicks to the extremes).
+- **Three.js 0.149** (cdnjs, last UMD build) — the ink line as a real 3D tube
+  with paper fog, drifting ink specks at three parallax depths, and the camera
+  moves. Renders on demand only; verified zero work at idle.
 
-## Decisions made autonomously
+If any CDN script fails, the site silently falls back: no GSAP → static flow
+layout; no WebGL → DOM line elements run the same choreography.
 
-1. **mockup-d.html is truncated** (cuts off mid-script; no closing tags). The final ~10% — how little Bryan's transform is applied, the finale fade, scroll wiring — is reconstructed from the file's phase-map comments and the PRD. The feel of the ending is my reading of it.
-2. **Flow-first architecture:** the mockup defaults to the fixed scene and overrides it in a media query. I inverted that: static layout is the default, JS adds the scene only when viewport ≥760px + motion allowed + not user-disabled. Safer with JS off and simpler to reason about.
-3. **No photography.** Mockup-d is purely typographic, so the headshot, project screenshots, and VOINOSIS logo are not on the page. The files remain in `images/` untouched; easy to reintroduce if you miss your face.
-4. **Kicker green:** the mockup's `--pop` (#41b06e) fails WCAG contrast for small text on paper, so tiny green labels use a darker `--pop-deep` (#2c7a4a); the bright pop stays for dots, rules, underlines. Slightly less zingy, passes AA.
-5. **Card tags/titles from the mockup, descriptions from v2** (per PRD), VOINOSIS updated to past tense + July 2026 completion. The AI Middleware card keeps its live Lovable prototype link. The one em-dash inside a v2 description ("content — recently shipping") became a comma; year ranges use en dashes (2007–2025), which I read as allowed ("no em-dashes").
-6. **Ctrl K vs ⌘K:** the nav chip and palette show Ctrl K on Windows/Linux, ⌘K on Mac.
-7. **Motion toggle** flips the experience live (no reload) and persists in localStorage.
-8. **Palette markup keeps `role="listbox"`** — html-validate wanted a native `<select>`, which is the wrong element for a command palette; rule disabled for that one line with a comment.
-9. `llms.txt` and the "Copy this page as Markdown" text are maintained as two copies of the same content (no build step to share them). If you edit copy later, update both.
+## The experience, beat by beat
 
-## Two technical notes for future-you (or future-Claude)
+1. **Hero** (deliberate): character-stagger headline rise; the ink line draws down.
+2. **Descent** (rhythmic): one beat per station — enter, settle composed, exit.
+   Ghost roman numerals drift behind at a slower parallax rate. Little Bryan
+   takes one long readable hop per station gap, grounded at every stop.
+3. **The bend** (held): the node pops with overshoot, and the camera swings ~23
+   degrees around the corner in 3D — the one moment the scene reveals its depth.
+   Confined to the window where nothing DOM-registered is visible, so GL/DOM
+   registration never breaks. Little Bryan ducks around the bend.
+4. **The revolve** (playful): five cards take turns facing front with eased
+   settling. Little Bryan lives ON the cards: sprints across each top edge,
+   leaps the gap with full jump animation, lands on the incoming card while it
+   is still swinging to center, and keeps moving whenever the scroll moves (no
+   parked dwell — verified zero still-frames across a cycle). A soft shadow
+   under the front card widens and lightens mid-flip. VOINOSIS (twice the copy)
+   gets a dense card variant so it fits every viewport.
+5. **The exit** (the signature shot): he hops off the last card onto the line,
+   and the camera dollies horizontally along it — cards stream away, the
+   vertical and its corner node are left behind, ink specks fly past at three
+   speeds, and for a beat it's just the runner on an endless line. The end page
+   arrives WITH the camera (slides in from the right as the dolly decelerates),
+   and the line eases down and docks as the broadsheet rule under the sign-off.
+6. **Home** (calm): he waves from the line at "Say hi." — bounce, wrist
+   follow-through, pleased head tilt. Composed snap point; long quiet tail.
 
-- **Never give `#ring` opacity below 1.** Opacity < 1 forces the browser to flatten `preserve-3d` and the whole 3D revolve collapses into a tilted mess (this bit us mid-build: even `0.999999` from a fade calculation triggers it). Fades live on the individual cards.
-- The ring's x-offset is clamped by the perspective magnification (~1.354×) so the front card never overflows narrow scene viewports (768–900px).
+## Little Bryan (the mascot got the works)
 
-## QA done
+One articulated SVG rig (hips/knees, shoulders/elbows, neck, scarf) driven by
+a parametric pose system. Jumps are pure functions of progress (anticipation
+crouch with a real dip, launch stretch, tuck, squash-and-stretch landing, dust
+puff) so they play backward when you scrub up. Run cycle speed follows real
+displacement. The scarf has spring physics (follow-through). Stop scrolling
+anywhere and he settles to a stand, then fidgets (looks around / adjusts the
+scarf, alternating); mid-stride stalls settle too instead of freezing. His
+card positions are solved from the exact ring-transform math every frame
+(`cardTopPoint`), so his feet stay glued at any scroll speed or direction.
 
-- Screenshots at 375 / 768 / 1280 including 13 scrolled stops through every phase (headless Chrome + puppeteer-core; artifacts in `..\_qa-shots\`).
-- Reduced-motion emulation: static render, zero running animations.
-- Keyboard: skip link → logo → palette → contact links; palette fully keyboard-driven (Ctrl+K, arrows, Enter, Esc, focus restore). Cards stay in the accessibility tree in scene mode (opacity, not visibility).
-- html-validate clean; no console or page errors at any width; no horizontal overflow; no em-dashes in rendered copy (scripted sweep).
-- The scroll engine runs only on scroll events — verified ~0 style mutations/sec while idle.
-- GitHub strip fetches real events (shows your last pushes), caches for 30 minutes, hides on failure.
+## Decisions made autonomously (beyond the PRD text)
 
-## Needs your taste pass
+1. Choreography for the character runs in tween-time while card positions use
+   their eased motion — this is what makes the run/leap/ride timing hold up.
+2. Card revolve ease changed from back.out overshoot to power2.inOut: the
+   overshoot front-loaded card motion so hard that character beats got no
+   scroll-time. The playfulness moved into the leaps themselves.
+3. Snap ignores ScrollTrigger's velocity projection (see stack notes).
+4. The finale overlay is transparent in scene mode so the line can persist.
+5. Three.js 0.149 (not latest) because it is the last classic-script build;
+   modern ESM builds would need an import map. Noted as acceptable debt.
+6. Little Bryan's on-card perch/run positions, arc heights, and the dolly
+   length (~2.2 screen widths) are tuned numbers, all near the top of their
+   code blocks for future taste passes.
 
-- **The revolve pacing** — dwell is 18% of each card's slice. If cards feel like they linger too long or too little, `DWELL` in script.js is one number.
-- **Little Bryan's poses** — three hand-drawn-ish SVG poses. If leap reads as "falling", the paths are tiny and easy to tweak.
-- **The 768–1000px scene** — it works, but the cards dominate more than at 1280. If you'd rather tablets get the mobile timeline, change the 760 breakpoint to ~1000 in two places (style.css media query + the bootstrap/script matchMedia).
-- Whether "SHIPS REAL THINGS" hero framing + no headshot feels right for recruiters — this was the approved direction, just confirming you still like it in the flesh.
+## Perf posture
 
-## Public-if-merged warning
+- No free-running loops: the master timeline renders on ScrollTrigger updates;
+  the GL layer renders only when marked dirty; character writes go silent when
+  settled (verified 0 style mutations/sec at true idle through the Lenis path).
+- GL: DPR capped at 1.5, ~60 speck points, two tube geometries, no lights or
+  shadow maps (the "soft shadow" is a CSS gradient). Three.js only initializes
+  in scene mode (desktop + motion allowed).
+- Tested at 375 / 768 / 1280 / 1520: all snap stops composed, no console
+  errors, no horizontal overflow, html-validate clean, no em-dashes in copy.
 
-These files are on the branch and would be **publicly reachable** on your live domain after merge, e.g. `bryanweiwei.github.io/PRD-v3.md`:
+## Parity
 
-- `PRD.md` (v2 spec, already on the branch history)
-- `PRD-v3.md`
-- `design-reference/mockup-d.html`
-- `NOTES.md` (this file)
-- `llms.txt` — **intentionally public**, leave it
+- **Mobile (<760px)** keeps the v3 designed vertical timeline; little Bryan
+  hops down the left line (with landing squash + dust when GSAP is present)
+  and waves at the bottom. No scroll-jacking, no Lenis.
+- **Reduced motion**: fully static single-column render, zero running
+  animations (verified by emulation), little Bryan in a static stand.
+- Palette (Ctrl/Cmd+K), GitHub strip, llms.txt, copy-as-Markdown all carried
+  over from v3 unchanged; palette jumps map to timeline labels in scene mode.
 
-Delete the first four before or right after merging if you don't want them readable (they're harmless, but they're your internal docs). `git rm PRD.md PRD-v3.md NOTES.md && git rm -r design-reference` then commit.
+## Known rough edges (honest list)
+
+- Pausing exactly mid-dolly snaps to the nearer of card-5 / home; before the
+  midpoint that means re-running part of the travel in reverse. Watchable, but
+  if it bothers you the snap could special-case the dolly window.
+- The GL line is absent for the ~1% of desktops without WebGL; the DOM
+  fallback line follows the same choreography but without depth/taper.
+- `_qa-shots\` (outside the repo) holds ~150 QA screenshots from this run.
+
+## Public-if-merged warning (same as v3)
+
+`PRD.md`, `PRD-v3.md`, `PRD-v4.md`, `design-reference/`, and this `NOTES.md`
+will be publicly reachable on the live domain if merged as-is. `llms.txt` is
+intentionally public. Delete the internal docs before/after merging if you
+prefer: `git rm PRD.md PRD-v3.md PRD-v4.md NOTES.md; git rm -r design-reference`.
 
 ## Morning checklist
 
-1. **Review:** `git checkout redesign-v3`, open `index.html` in Chrome/Edge. Scroll the whole thing. Try Ctrl+K. Narrow the window below 760 for the mobile layout; check your phone too.
-2. **Decide** on the taste-pass items above (especially: keep internal docs public or delete them).
-3. **Ship:** `git checkout main`, `git merge redesign-v3`, `git push` — pushing main puts it live.
+1. **Review:** `git checkout redesign-v4`, open `index.html` in Chrome
+   (hard-refresh, Ctrl+Shift+R). Scroll the whole thing slowly, then flick
+   through it fast. Try stopping anywhere; try scrolling backward mid-leap.
+   Check your phone (mobile timeline) and, if you can, a reduced-motion pass
+   (Windows: Settings → Accessibility → Visual effects → Animation effects off).
+2. **Taste pass:** the tuned numbers listed above are all one-line changes —
+   say the word and I'll adjust.
+3. **Ship:** `git checkout main`, `git merge redesign-v4`, `git push` — pushing
+   main deploys it live. (Consider the public-files cleanup first.)
