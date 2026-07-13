@@ -152,6 +152,190 @@
   var master = null;
   var lenis = null;
 
+  /* ---------- Three.js layer: the ink line in real depth ----------
+     Owns: the L as a 3D tube (receding in z, drawn by scroll), the
+     elbow node, drifting ink specks at three depths, paper fog, and
+     the camera swing around the bend. Cards/type stay DOM for
+     crispness; the camera only performs when no DOM-registered
+     element is on screen (the elbow window), so registration between
+     the GL line and DOM dots never breaks. Renders on demand only. */
+
+  var GL = { ready: false };
+  var onSceneMouse = null;
+
+  function glPx2World() {
+    /* camera z=10, fov 40: world units per CSS pixel */
+    return (2 * 10 * Math.tan(20 * Math.PI / 180)) / vh;
+  }
+
+  function buildTubes() {
+    var w = glPx2World();
+    var hh = (vh / 2) * w;          /* half screen height in world */
+    var branchMax = vw * w;         /* longest the branch can get */
+
+    if (GL.vTube) {
+      GL.group.remove(GL.vTube); GL.vTube.geometry.dispose();
+      GL.group.remove(GL.bTube); GL.bTube.geometry.dispose();
+    }
+
+    /* vertical: top of screen (receded) down through the corner to
+       the bottom of screen; the below-corner tail retracts later */
+    var vPath = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, hh * 1.02, -1.35),
+      new THREE.Vector3(0, hh * 0.45, -0.55),
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, -hh * 0.55, 0.3),
+      new THREE.Vector3(0, -hh * 1.02, 0.45)
+    ], false, 'catmullrom', 0.0);
+    var vGeo = new THREE.TubeGeometry(vPath, 120, 1.6 * w, 6, false);
+    GL.vTube = new THREE.Mesh(vGeo, GL.inkMat);
+    GL.vIndexCount = vGeo.index.count;
+    GL.vTube.geometry.setDrawRange(0, 0);
+    GL.group.add(GL.vTube);
+
+    /* branch: a small bend at the corner, then out right, receding */
+    var bPath = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, hh * 0.045, 0),
+      new THREE.Vector3(0.004, hh * 0.008, 0),
+      new THREE.Vector3(hh * 0.045, 0, 0.004),
+      new THREE.Vector3(branchMax * 0.55, 0, -0.35),
+      new THREE.Vector3(branchMax * 1.02, 0, -0.8)
+    ], false, 'catmullrom', 0.12);
+    var bGeo = new THREE.TubeGeometry(bPath, 140, 1.6 * w, 6, false);
+    GL.bTube = new THREE.Mesh(bGeo, GL.inkMat);
+    GL.bIndexCount = bGeo.index.count;
+    GL.bTube.geometry.setDrawRange(0, 0);
+    GL.group.add(GL.bTube);
+
+    GL.node.scale.setScalar(1);
+    GL.nodeBase = 5.5 * w;
+  }
+
+  function initGL() {
+    if (!window.THREE) return false;
+    var canvas = document.getElementById('gl');
+    try {
+      GL.renderer = new THREE.WebGLRenderer({
+        canvas: canvas, alpha: true, antialias: true
+      });
+    } catch (e) { return false; }
+
+    GL.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+    GL.renderer.setSize(vw, vh, false);
+
+    GL.scene = new THREE.Scene();
+    GL.scene.fog = new THREE.Fog(0xf4f9f5, 10.4, 13.2);
+
+    GL.camera = new THREE.PerspectiveCamera(40, vw / vh, 0.1, 40);
+    GL.camera.position.set(0, 0, 10);
+
+    GL.inkMat = new THREE.MeshBasicMaterial({ color: 0x0e1611 });
+    GL.group = new THREE.Group();
+    GL.scene.add(GL.group);
+
+    /* elbow node: ink core + mint halo */
+    var w = glPx2World();
+    GL.node = new THREE.Group();
+    var core = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 12, 12),
+      new THREE.MeshBasicMaterial({ color: 0x41b06e })
+    );
+    var halo = new THREE.Mesh(
+      new THREE.RingGeometry(1.6, 2.6, 24),
+      new THREE.MeshBasicMaterial({
+        color: 0x41b06e, transparent: true, opacity: 0.25, side: THREE.DoubleSide
+      })
+    );
+    GL.node.add(core);
+    GL.node.add(halo);
+    GL.node.position.set(0, 0, 0.02);
+    GL.group.add(GL.node);
+
+    /* ink specks at three depths (parallax rates) */
+    GL.specks = [];
+    [[-2.6, 0.25, 0.05], [-1.2, 0.5, 0.1], [0.8, 1.0, 0.2]].forEach(function (cfg) {
+      var g = new THREE.BufferGeometry();
+      var pts = [];
+      for (var i = 0; i < 18; i++) {
+        pts.push((Math.random() - 0.5) * 13, (Math.random() - 0.5) * 9, cfg[0]);
+      }
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+      var m = new THREE.PointsMaterial({
+        color: 0x0e1611, size: 0.028 + cfg[2] * 0.05,
+        transparent: true, opacity: 0.16 + cfg[2]
+      });
+      var p = new THREE.Points(g, m);
+      p.userData.rate = cfg[1];
+      GL.scene.add(p);
+      GL.specks.push(p);
+    });
+
+    buildTubes();
+
+    GL.need = true;
+    gsap.ticker.add(glTick);
+    GL.ready = true;
+    html.classList.add('gl');
+    return true;
+  }
+
+  function glTick() {
+    if (!GL.ready || !GL.need) return;
+    GL.need = false;
+    GL.renderer.render(GL.scene, GL.camera);
+  }
+
+  function updateGL(p) {
+    if (!GL.ready) return;
+    var w = glPx2World();
+
+    /* line draw state (same formulas that drive the DOM fallback) */
+    var vFrac = S.grow * (1 - S.retract * 0.5);
+    GL.vTube.geometry.setDrawRange(0, Math.round(GL.vIndexCount * vFrac));
+
+    var branchFrac = (S.elbow * 46 + S.slide * 46) / 94;
+    GL.bTube.geometry.setDrawRange(0, Math.round(GL.bIndexCount * branchFrac));
+
+    /* the L slides left with the revolve */
+    var lxWorld = (-S.slide * 38 / 100) * vw * w;
+    GL.group.position.x = lxWorld;
+
+    /* node pop */
+    var ns = GL.nodeBase * (0.001 + S.elbow);
+    GL.node.scale.setScalar(ns);
+    GL.node.children[1].material.opacity = 0.25 * S.elbow;
+
+    /* camera: swing around the bend (only during the elbow window),
+       plus a breathing dolly during the descent beats */
+    var theta = S.swing * 0.4;
+    var dolly = 0;
+    if (p > 10 && p < 38.5) {
+      var sfrac = ((p - 10) / 9.5) % 1;
+      dolly = 0.45 * Math.sin(Math.PI * sfrac);
+    }
+    var pivotX = GL.group.position.x;
+    GL.camera.position.x = pivotX + Math.sin(theta) * 10;
+    GL.camera.position.z = Math.cos(theta) * (10 - dolly);
+    GL.camera.lookAt(pivotX, 0, 0);
+
+    /* specks drift upward at depth-dependent rates */
+    GL.specks.forEach(function (sp) {
+      var travel = (p / 100) * 7 * sp.userData.rate;
+      sp.position.y = ((travel % 9) + 9) % 9 - 4.5;
+      sp.position.x = (GL.mouseX || 0) * 0.3 * sp.userData.rate;
+    });
+
+    GL.need = true;
+  }
+
+  function killGL() {
+    if (!GL.ready) return;
+    gsap.ticker.remove(glTick);
+    GL.renderer.dispose();
+    html.classList.remove('gl');
+    GL.ready = false;
+  }
+
   function lenisRaf(time) { lenis.raf(time * 1000); }
 
   function renderScene() {
@@ -190,6 +374,24 @@
     yearEl.textContent = YEARS[front];
     yearEl.style.opacity = S.ringIn > 0.25 ? 0.9 : 0;
 
+    /* soft shadow the front card casts on the paper behind it */
+    var bestFace = (function () {
+      var a = ((front * STEP - u * STEP) % 360 + 360) % 360;
+      if (a > 180) a = 360 - a;
+      return 1 - Math.min(1, a / 130);
+    })();
+    var shadow = document.getElementById('ring-shadow');
+    if (shadow) {
+      var MAG2 = 1300 / (1300 - RADIUS);
+      var sx = vw / 2 + ringX * MAG2 - 280;
+      var widen = 1.25 - 0.35 * bestFace;   /* wider + lighter mid-flip */
+      shadow.style.transform =
+        'translate(' + sx + 'px, ' + (168 + 26 * (1 - bestFace)) + 'px) scale(' + widen + ', 1)';
+      shadow.style.opacity = (S.ringIn * (0.35 + 0.5 * bestFace)).toFixed(3);
+    }
+
+    updateGL(p);
+
     end.classList.toggle('live', p > 90);
 
     /* ---- little Bryan ---- */
@@ -200,8 +402,10 @@
         'translate(' + (r.left - vw / 2 + 34) + 'px,' + (r.bottom - vh / 2 + 14) + 'px)';
       setPose('stand', true);
     } else if (p > 6) {
+      /* fades out while the camera swings the bend (he ducks around it) */
       guy.style.opacity =
-        Math.min(1, (p - 6) / 3) * Math.max(0, Math.min(1, (89 - p) / 3));
+        Math.min(1, (p - 6) / 3) * Math.max(0, Math.min(1, (89 - p) / 3)) *
+        (1 - (S.swing || 0));
       var hop = 0, gx = 0, tilt = 0, frac = 0;
       if (p < 39) {
         var uu = Math.max(0, (p - 10) / 9.5);
@@ -254,7 +458,33 @@
       }
     });
 
-    S = { grow: 0, retract: 0, elbow: 0, slide: 0, u: 0, ringIn: 0 };
+    S = { grow: 0, retract: 0, elbow: 0, slide: 0, u: 0, ringIn: 0, swing: 0 };
+
+    /* ghost station numerals: a deeper parallax layer behind the text */
+    var ghosts = stations.map(function (st, i) {
+      var g = st.querySelector('.st-ghost');
+      if (!g) {
+        g = document.createElement('span');
+        g.className = 'st-ghost';
+        g.setAttribute('aria-hidden', 'true');
+        g.textContent = ['i.', 'ii.', 'iii.'][i];
+        st.appendChild(g);
+      }
+      return g;
+    });
+
+    initGL();
+
+    /* mouse parallax: specks (GL) + ghost numerals; the tube stays
+       registered with the DOM dots, so it never shifts with cursor */
+    var ghostX = ghosts.map(function (g) { return gsap.quickTo(g, 'x', { duration: 0.6, ease: 'power2.out' }); });
+    onSceneMouse = function (e) {
+      var mx = (e.clientX / vw) * 2 - 1;
+      GL.mouseX = mx;
+      GL.need = true;
+      ghostX.forEach(function (fn) { fn(mx * -12); });
+    };
+    addEventListener('mousemove', onSceneMouse, { passive: true });
 
     /* hero entrance: staggered character rise, line by line (load, not scroll) */
     gsap.set(hero.querySelectorAll('.rise'), { y: 0 });
@@ -321,6 +551,11 @@
       }, t0 + 0.6);
       master.addLabel('st' + i, t0 + 5.2);
       master.to(st, { y: '-62vh', opacity: 0, duration: 3.5, ease: 'power2.in' }, t0 + 6);
+      /* the ghost numeral travels slower and linearly: depth */
+      var ghost = st.querySelector('.st-ghost');
+      if (ghost) {
+        master.fromTo(ghost, { y: '26vh' }, { y: '-14vh', duration: 9.5, ease: 'none' }, t0);
+      }
     });
 
     /* ELBOW — a held moment: retract, node pops with overshoot, branch grows */
@@ -330,7 +565,11 @@
     master.to(S, { elbow: 1, duration: 4, ease: 'expo.out' }, 40.5);
     master.fromTo(tl, { opacity: 0, y: 24 },
       { opacity: 1, y: 0, duration: 3, ease: 'power2.out' }, 41);
-    master.addLabel('elbow', 44.5);
+
+    /* the camera swings around the bend and back — the held moment */
+    master.to(S, { swing: 1, duration: 3, ease: 'power2.inOut' }, 39);
+    master.to(S, { swing: 0, duration: 3, ease: 'power2.inOut' }, 42.2);
+    master.addLabel('elbow', 45.3);
 
     /* REVOLVE — the L slides out, cards take turns facing front */
     master.to(S, { slide: 1, duration: 6, ease: 'power2.inOut' }, 45);
@@ -341,6 +580,9 @@
       master.to(S, { u: i, duration: 5.5, ease: 'back.out(1.15)' }, seg);
       master.addLabel('card' + i, seg + 6.6);
     }
+    /* ghost year drifts slowly upward through the revolve: depth */
+    master.fromTo(yearEl, { y: 36 }, { y: -36, duration: 42, ease: 'none' }, 45);
+
     /* card4 label ≈ 87.1; ring hands off to the finale */
     master.to(S, { ringIn: 0, duration: 3, ease: 'power1.in' }, 88.5);
     master.to(tl, { opacity: 0, duration: 2, ease: 'power1.in' }, 88.5);
@@ -367,6 +609,16 @@
   }
 
   function killScene() {
+    if (onSceneMouse) {
+      removeEventListener('mousemove', onSceneMouse);
+      onSceneMouse = null;
+    }
+    killGL();
+    var shadow = document.getElementById('ring-shadow');
+    if (shadow) shadow.removeAttribute('style');
+    document.querySelectorAll('.st-ghost').forEach(function (g) {
+      g.removeAttribute('style');
+    });
     if (master) {
       if (master.scrollTrigger) master.scrollTrigger.kill();
       master.kill();
@@ -414,6 +666,13 @@
     measure();
     if (inScene()) {
       placeCards();
+      if (GL.ready) {
+        GL.renderer.setSize(vw, vh, false);
+        GL.camera.aspect = vw / vh;
+        GL.camera.updateProjectionMatrix();
+        buildTubes();
+        GL.need = true;
+      }
       if (window.ScrollTrigger) ScrollTrigger.refresh();
       renderScene();
     } else {

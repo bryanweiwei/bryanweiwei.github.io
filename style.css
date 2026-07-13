@@ -423,7 +423,7 @@ nav .logo {
   border: 2px solid var(--ink);
 }
 
-#tl, #year, #scene, #runway { display: none; }
+#tl, #year, #scene, #runway, .grain, #ring-shadow { display: none; }
 
 #guy { display: none; }
 
@@ -442,6 +442,64 @@ html.scene #scene {
   overflow: hidden;
   z-index: 1;
 }
+
+html.scene #gl {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* when WebGL owns the line, the DOM line elements retire */
+html.scene.gl #vline,
+html.scene.gl #hline,
+html.scene.gl #node { display: none; }
+
+/* paper grain atmosphere (scene only) */
+html.scene .grain {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.045'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* soft dynamic shadow the front card casts on the paper behind it */
+html.scene #ring-shadow {
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 560px;
+  height: 130px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse closest-side, rgba(14, 22, 17, 0.16), transparent 70%);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+/* ghost station numerals (deep background parallax layer, JS-created) */
+.st-ghost {
+  display: none;
+  position: absolute;
+  top: 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 640;
+  font-size: clamp(160px, 24vw, 340px);
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(14, 22, 17, 0.10);
+  pointer-events: none;
+  z-index: -1;
+}
+
+html.scene .st-ghost { display: block; }
+
+.station.left .st-ghost { right: calc(50% + 40px); }
+.station.right .st-ghost { left: calc(50% + 40px); }
 
 html.scene #vline {
   position: absolute;
