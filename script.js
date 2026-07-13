@@ -127,7 +127,15 @@
     });
   }
 
-  /* ---------- little Bryan (Phase A: v3 behavior, timeline-driven) ---------- */
+  /* ---------- little Bryan: the character ----------
+     One articulated rig, one parametric pose vector P. The scrubbed
+     jump choreography (anticipation crouch, arc, squash-stretch
+     landing) is a pure function of hop progress, so it plays
+     forward AND backward with the scroll. Run cycle speed follows
+     scroll velocity; scarf gets spring physics (follow-through);
+     idle fidgets fire when the scroll rests; the finale wave has
+     bounce and head tilt. All GSAP-driven, scene mode only —
+     flow mode keeps the cheap CSS pose classes below. */
 
   var lastPose = '';
   function setPose(pose, waving) {
@@ -139,11 +147,214 @@
     guy.classList.toggle('waving', !!waving);
   }
 
-  function poseForArc(frac) {
-    if (frac <= 0.02 || frac >= 0.98) return 'stand';
-    if (frac < 0.22) return 'run';
-    if (frac < 0.78) return 'leap';
-    return 'stand';
+  var CHAR = { ready: false };
+
+  var POSES = {
+    stand:  { armL: 0, foreL: 0, armR: 0, foreR: 0, legL: 0, shinL: 0, legR: 0, shinR: 0, head: 0, scarf: 0, rigY: 0, squash: 1, lean: 0 },
+    crouch: { armL: -14, foreL: -10, armR: -18, foreR: -8, legL: 16, shinL: -30, legR: -14, shinR: 34, head: 5, scarf: -4, rigY: 3, squash: 0.93, lean: 3 },
+    launch: { armL: -55, foreL: -15, armR: 50, foreR: 15, legL: -10, shinL: 4, legR: 8, shinR: 2, head: -5, scarf: 8, rigY: -2, squash: 1.07, lean: -4 },
+    air:    { armL: -75, foreL: -22, armR: 42, foreR: 20, legL: 55, shinL: -68, legR: -45, shinR: 55, head: -6, scarf: 16, rigY: 0, squash: 1, lean: -6 },
+    land:   { armL: 24, foreL: 14, armR: -22, foreR: -12, legL: 20, shinL: -40, legR: -18, shinR: 42, head: 6, scarf: -8, rigY: 2.5, squash: 0.88, lean: 4 }
+  };
+
+  var P = {}, Pfields = Object.keys(POSES.stand);
+  Pfields.forEach(function (k) { P[k] = POSES.stand[k]; });
+
+  function initChar() {
+    if (CHAR.ready || !window.gsap) return;
+    var ids = ['rig', 'bw-body', 'bw-head', 'bw-scarf', 'bw-armL', 'bw-armR',
+               'bw-foreL', 'bw-foreR', 'bw-legL', 'bw-legR', 'bw-shinL', 'bw-shinR'];
+    CHAR.el = {};
+    ids.forEach(function (id) { CHAR.el[id] = document.getElementById(id); });
+    var origins = {
+      rig: '20 48', 'bw-body': '20 32', 'bw-head': '20 15', 'bw-scarf': '20 15',
+      'bw-armL': '20 20', 'bw-armR': '20 20', 'bw-foreL': '15 25', 'bw-foreR': '25 25',
+      'bw-legL': '20 32', 'bw-legR': '20 32', 'bw-shinL': '16 39', 'bw-shinR': '24 39'
+    };
+    ids.forEach(function (id) {
+      gsap.set(CHAR.el[id], { svgOrigin: origins[id], rotation: 0.001 });
+    });
+    CHAR.dust = [].slice.call(document.querySelectorAll('#bw-dust .dust'));
+    CHAR.scarfA = 0; CHAR.scarfV = 0;
+    CHAR.runPhase = 0;
+    CHAR.lastP = 0;
+    CHAR.lastGuyY = 0;
+    CHAR.idleSince = 0;
+    CHAR.fidgetTl = null;
+    CHAR.fidgetKind = 0;
+    CHAR.wavePhase = 0;
+    CHAR.ready = true;
+  }
+
+  function applyP() {
+    var e = CHAR.el;
+    gsap.set(e['bw-armL'], { rotation: P.armL });
+    gsap.set(e['bw-foreL'], { rotation: P.foreL });
+    gsap.set(e['bw-armR'], { rotation: P.armR });
+    gsap.set(e['bw-foreR'], { rotation: P.foreR });
+    gsap.set(e['bw-legL'], { rotation: P.legL });
+    gsap.set(e['bw-shinL'], { rotation: P.shinL });
+    gsap.set(e['bw-legR'], { rotation: P.legR });
+    gsap.set(e['bw-shinR'], { rotation: P.shinR });
+    gsap.set(e['bw-head'], { rotation: P.head });
+    gsap.set(e['bw-scarf'], { rotation: P.scarf + CHAR.scarfA });
+    gsap.set(e['rig'], { y: P.rigY, scaleY: P.squash, rotation: P.lean });
+  }
+
+  function lerpPose(a, b, t) {
+    Pfields.forEach(function (k) { P[k] = a[k] + (b[k] - a[k]) * t; });
+  }
+
+  function smooth(t) { return t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t); }
+
+  /* the jump as a pure function of hop progress (scrub-safe) */
+  function jumpPose(f) {
+    if (f < 0.14) lerpPose(POSES.stand, POSES.crouch, smooth(f / 0.14));
+    else if (f < 0.3) lerpPose(POSES.crouch, POSES.launch, smooth((f - 0.14) / 0.16));
+    else if (f < 0.62) lerpPose(POSES.launch, POSES.air, smooth((f - 0.3) / 0.32));
+    else if (f < 0.82) lerpPose(POSES.air, POSES.air, 1);
+    else if (f < 0.92) lerpPose(POSES.air, POSES.land, smooth((f - 0.82) / 0.1));
+    else lerpPose(POSES.land, POSES.stand, smooth((f - 0.92) / 0.08));
+  }
+
+  /* run cycle as a function of phase; phase follows scroll velocity */
+  function runPose(ph, intensity) {
+    var s = Math.sin(ph), c = Math.cos(ph), k = intensity;
+    lerpPose(POSES.stand, POSES.stand, 0);
+    P.legL = s * 36 * k;
+    P.legR = -s * 36 * k;
+    P.shinL = Math.max(0, -c) * 52 * k * (s > 0 ? 0.4 : 1);
+    P.shinR = Math.max(0, c) * 52 * k * (s < 0 ? 0.4 : 1);
+    P.armL = -s * 30 * k;
+    P.armR = s * 30 * k;
+    P.foreL = -12 * k;
+    P.foreR = 12 * k;
+    P.rigY = -Math.abs(Math.sin(ph * 2)) * 1.6 * k;
+    P.lean = 5 * k;
+    P.scarf = 6 * k;
+    P.head = 2 * k;
+  }
+
+  function wavePose(t) {
+    lerpPose(POSES.stand, POSES.stand, 0);
+    P.armR = -118 + Math.sin(t * 8.5) * 22;         /* the wave */
+    P.foreR = -20 + Math.sin(t * 8.5 + 0.6) * 12;   /* wrist follows */
+    P.rigY = -Math.abs(Math.sin(t * 4.25)) * 2.4;   /* bounce */
+    P.squash = 1 + Math.abs(Math.sin(t * 4.25)) * 0.03;
+    P.head = 7 + Math.sin(t * 4.25 + 1.2) * 2;      /* pleased tilt */
+    P.armL = -6;
+  }
+
+  function fireDust() {
+    if (!CHAR.ready) return;
+    CHAR.dust.forEach(function (d, i) {
+      gsap.fromTo(d,
+        { opacity: 0.55, scale: 0.3, x: 0, y: 0, svgOrigin: '20 48' },
+        { opacity: 0, scale: 1.1, x: (i - 1) * 5, y: -2, duration: 0.45, ease: 'power2.out', overwrite: true });
+    });
+  }
+
+  function killFidget(fast) {
+    if (CHAR.fidgetTl) { CHAR.fidgetTl.kill(); CHAR.fidgetTl = null; }
+    if (fast) gsap.to(P, {
+      armR: 0, foreR: 0, head: 0, duration: 0.25, ease: 'power2.out', overwrite: 'auto'
+    });
+  }
+
+  function startFidget() {
+    if (CHAR.fidgetTl) return;
+    CHAR.fidgetKind = 1 - CHAR.fidgetKind;
+    var tl = gsap.timeline({
+      onComplete: function () { CHAR.fidgetTl = null; CHAR.idleSince = performance.now(); }
+    });
+    if (CHAR.fidgetKind === 0) {
+      /* looks around */
+      tl.to(P, { head: -9, duration: 0.45, ease: 'power2.inOut' })
+        .to(P, { head: 8, duration: 0.7, ease: 'power2.inOut' }, '+=0.35')
+        .to(P, { head: 0, duration: 0.5, ease: 'power2.inOut' }, '+=0.3');
+    } else {
+      /* adjusts the scarf */
+      tl.to(P, { armR: -128, foreR: -38, head: 4, duration: 0.5, ease: 'power3.out' })
+        .to(P, { scarf: 10, duration: 0.18, ease: 'power2.inOut', onUpdate: null }, '-=0.1')
+        .to(P, { scarf: -6, duration: 0.22, ease: 'power2.inOut' })
+        .to(P, { scarf: 0, armR: 0, foreR: 0, head: 0, duration: 0.55, ease: 'power2.inOut' }, '+=0.2');
+    }
+    CHAR.fidgetTl = tl;
+  }
+
+  /* character context, written by renderScene each scroll frame */
+  var gctx = { mode: 'hidden', frac: 0, visible: false };
+
+  function guyTick() {
+    if (!CHAR.ready || !inScene()) return;
+    var now = performance.now();
+
+    /* scarf spring: follow-through on vertical motion */
+    var guyY = gctx.y || 0;
+    var vy = guyY - CHAR.lastGuyY;
+    CHAR.lastGuyY = guyY;
+    var target = Math.max(-28, Math.min(28, vy * 2.2));
+    CHAR.scarfV += (target - CHAR.scarfA) * 0.18;
+    CHAR.scarfV *= 0.78;
+    CHAR.scarfA += CHAR.scarfV;
+
+    var vel = gctx.p - CHAR.lastP;      /* timeline units this tick */
+    CHAR.lastP = gctx.p || 0;
+
+    if (gctx.mode === 'wave') {
+      killFidget(false);
+      CHAR.wavePhase += gsap.ticker.deltaRatio(60) / 60;
+      wavePose(CHAR.wavePhase);
+      applyP();
+      return;
+    }
+
+    if (gctx.mode === 'jump') {
+      killFidget(false);
+      CHAR.idleSince = now;
+      /* dust on touchdown, forward only */
+      if (CHAR.prevFrac < 0.9 && gctx.frac >= 0.9 && vel > 0) fireDust();
+      CHAR.prevFrac = gctx.frac;
+      jumpPose(gctx.frac);
+      applyP();
+      return;
+    }
+
+    if (gctx.mode === 'idle' && gctx.visible) {
+      if (Math.abs(vel) > 0.012) {
+        /* the line slides under him: run along it, speed = |velocity| */
+        killFidget(true);
+        CHAR.idleSince = now;
+        CHAR.runPhase += vel * 3.2;
+        runPose(CHAR.runPhase, Math.min(1, Math.abs(vel) * 30));
+        applyP();
+        return;
+      }
+      if (!CHAR.fidgetTl) {
+        /* ease back to standing, then fidget when the scroll rests */
+        var maxDelta = 0;
+        Pfields.forEach(function (k) {
+          P[k] += (POSES.stand[k] - P[k]) * 0.12;
+          var d = Math.abs(P[k] - POSES.stand[k]);
+          if (d > maxDelta) maxDelta = d;
+        });
+        if (now - CHAR.idleSince > 2600) startFidget();
+        /* fully settled: stop writing until something changes */
+        if (maxDelta < 0.01 && Math.abs(CHAR.scarfV) < 0.02 &&
+            Math.abs(CHAR.scarfA) < 0.05 && !CHAR.fidgetTl) {
+          CHAR.scarfA = 0; CHAR.scarfV = 0;
+          if (!CHAR.settled) { CHAR.settled = true; applyP(); }
+          return;
+        }
+      }
+      CHAR.settled = false;
+      applyP();
+      return;
+    }
+
+    /* hidden: relax state so re-entry is clean */
+    killFidget(false);
+    CHAR.idleSince = now;
   }
 
   /* ---------- the master timeline ---------- */
@@ -394,42 +605,60 @@
 
     end.classList.toggle('live', p > 90);
 
-    /* ---- little Bryan ---- */
+    /* ---- little Bryan: position + context (limbs live in guyTick) ---- */
+    gctx.p = p;
     if (p >= 91) {
       guy.style.opacity = Math.min(1, (p - 91) / 4);
       var r = waveAnchor.getBoundingClientRect();
+      var wy = r.bottom - vh / 2 + 12;
       guy.style.transform =
-        'translate(' + (r.left - vw / 2 + 34) + 'px,' + (r.bottom - vh / 2 + 14) + 'px)';
-      setPose('stand', true);
+        'translate(' + (r.left - vw / 2 + 34) + 'px,' + wy + 'px)';
+      gctx.mode = 'wave';
+      gctx.y = wy;
+      gctx.visible = true;
     } else if (p > 6) {
       /* fades out while the camera swings the bend (he ducks around it) */
-      guy.style.opacity =
+      var gop =
         Math.min(1, (p - 6) / 3) * Math.max(0, Math.min(1, (89 - p) / 3)) *
         (1 - (S.swing || 0));
-      var hop = 0, gx = 0, tilt = 0, frac = 0;
+      guy.style.opacity = gop.toFixed(3);
+      var hop = 0, gx = 0, tilt = 0, frac = 0, moving = false;
       if (p < 39) {
-        var uu = Math.max(0, (p - 10) / 9.5);
-        frac = uu - Math.floor(uu);
-        hop = Math.sin(Math.PI * frac) * 34;
-        tilt = Math.sin(Math.PI * 2 * frac) * 10;
+        /* hops happen BETWEEN stations; at each composed station stop
+           he is grounded (so idle fidgets can play) */
+        var rel = (p - 8) / 9.5;
+        var within = (rel - Math.floor(rel)) * 9.5;
+        frac = (rel >= 0 && rel < 3 && within < 6.2) ? within / 6.2 : 0;
+        moving = frac > 0;
+        hop = hopArc(frac) * 34;
+        tilt = Math.sin(Math.PI * 2 * frac) * 8;
       } else {
         frac = u - Math.floor(u);
         if (u >= N - 1 || u <= 0) frac = 0;
-        hop = Math.sin(Math.PI * frac) * 20;
-        tilt = Math.sin(Math.PI * 2 * frac) * 6;
+        moving = frac > 0;
+        hop = hopArc(frac) * 20;
+        tilt = Math.sin(Math.PI * 2 * frac) * 5;
         gx = lx * vw / 100 + 10;
       }
-      var sy = 1;
-      if (frac > 0.8 && frac < 0.98) {
-        sy = 1 - 0.09 * Math.sin(Math.PI * (frac - 0.8) / 0.18);
-      }
       guy.style.transform =
-        'translate(' + gx + 'px,' + (-hop) + 'px) rotate(' + tilt + 'deg) scale(1,' + sy + ')';
-      setPose(poseForArc(frac), false);
+        'translate(' + gx + 'px,' + (-hop) + 'px) rotate(' + tilt + 'deg)';
+      gctx.mode = (moving && frac > 0.02 && frac < 0.995) ? 'jump' : 'idle';
+      gctx.frac = frac;
+      gctx.y = -hop;
+      gctx.visible = gop > 0.05;
     } else {
       guy.style.opacity = 0;
-      setPose('stand', false);
+      gctx.mode = 'hidden';
+      gctx.visible = false;
     }
+  }
+
+  /* hop arc with anticipation: a small dip while he crouches, then
+     the jump; a pure function of progress, scrub-safe both ways */
+  function hopArc(f) {
+    if (f <= 0) return 0;
+    if (f < 0.17) return -Math.sin(Math.PI * (f / 0.17)) * 0.09;
+    return Math.sin(Math.PI * (f - 0.17) / 0.83);
   }
 
   function buildScene() {
@@ -459,6 +688,11 @@
     });
 
     S = { grow: 0, retract: 0, elbow: 0, slide: 0, u: 0, ringIn: 0, swing: 0 };
+
+    initChar();
+    guy.classList.remove('p-stand', 'p-run', 'p-leap', 'waving');
+    lastPose = '';
+    gsap.ticker.add(guyTick);
 
     /* ghost station numerals: a deeper parallax layer behind the text */
     var ghosts = stations.map(function (st, i) {
@@ -613,6 +847,14 @@
       removeEventListener('mousemove', onSceneMouse);
       onSceneMouse = null;
     }
+    if (window.gsap) gsap.ticker.remove(guyTick);
+    killFidget(false);
+    if (CHAR.ready) {
+      gsap.set(Object.keys(CHAR.el).map(function (k) { return CHAR.el[k]; }),
+        { clearProps: 'all' });
+      CHAR.scarfA = 0; CHAR.scarfV = 0;
+    }
+    gctx.mode = 'hidden';
     killGL();
     var shadow = document.getElementById('ring-shadow');
     if (shadow) shadow.removeAttribute('style');
@@ -736,7 +978,8 @@
 
   function teardownFlowGuy() {
     if (flowGuyIO) { flowGuyIO.disconnect(); flowGuyIO = null; }
-    guy.classList.remove('flow-guy', 'hopping');
+    guy.classList.remove('flow-guy', 'hopping', 'p-stand', 'p-run', 'p-leap', 'waving');
+    lastPose = '';
     guy.removeAttribute('style');
   }
 
@@ -772,6 +1015,16 @@
     stops.forEach(function (el) { flowGuyIO.observe(el); });
     flowGuyIO.observe(title);
   }
+
+  /* landing beat on mobile hops: squash + dust (once; needs GSAP, else skip) */
+  guy.addEventListener('transitionend', function (ev) {
+    if (ev.propertyName !== 'transform' || inScene()) return;
+    if (!window.gsap || !motionQ.matches) return;
+    initChar();
+    fireDust();
+    gsap.fromTo('#rig', { scaleY: 0.88, svgOrigin: '20 48' },
+      { scaleY: 1, duration: 0.35, ease: 'back.out(3)' });
+  });
 
   /* ---------- palette bridge ---------- */
 

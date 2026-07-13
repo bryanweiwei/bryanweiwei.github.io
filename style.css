@@ -679,7 +679,7 @@ body { position: relative; } /* anchor for flow-mode little Bryan */
 
 #guy {
   width: 38px;
-  height: 50px;
+  height: 52px;
   will-change: transform;
 }
 
@@ -703,7 +703,7 @@ html.scene #guy {
   left: 50%;
   top: 50%;
   z-index: 8;
-  margin: -58px 0 0 -19px;
+  margin: -55px 0 0 -19px;
   opacity: 0;
 }
 
@@ -725,14 +725,48 @@ html.scene #guy {
   fill: none;
 }
 
-/* pose visibility: exactly one pose shows */
-#guy .pose { display: none; }
-#guy.p-stand #pose-stand { display: block; }
-#guy.p-run #pose-run { display: block; }
-#guy.p-leap #pose-leap { display: block; }
+/* articulated rig: every joint rotates about its anchor (viewBox px).
+   In scene mode GSAP drives these inline; the classes below are the
+   flow-mode (mobile) static poses using the same joints. */
+#rig, #bw-body, #bw-head, #bw-scarf,
+#bw-armL, #bw-armR, #bw-foreL, #bw-foreR,
+#bw-legL, #bw-legR, #bw-shinL, #bw-shinR {
+  transform-box: view-box;
+}
 
-#guy.waving #wave-arm {
-  transform-origin: 20px 19px;
+#rig { transform-origin: 20px 48px; }
+#bw-body { transform-origin: 20px 32px; }
+#bw-head { transform-origin: 20px 15px; }
+#bw-scarf { transform-origin: 20px 15px; }
+#bw-armL, #bw-armR { transform-origin: 20px 20px; }
+#bw-foreL { transform-origin: 15px 25px; }
+#bw-foreR { transform-origin: 25px 25px; }
+#bw-legL, #bw-legR { transform-origin: 20px 32px; }
+#bw-shinL { transform-origin: 16px 39px; }
+#bw-shinR { transform-origin: 24px 39px; }
+
+#guy .scarf.s2 { opacity: 0.65; stroke-width: 2.2; }
+
+#bw-dust .dust { opacity: 0; stroke-width: 2; }
+
+/* flow-mode poses (no GSAP): approximations on the same rig */
+#guy.p-run #bw-legL { transform: rotate(30deg); }
+#guy.p-run #bw-shinL { transform: rotate(12deg); }
+#guy.p-run #bw-legR { transform: rotate(-32deg); }
+#guy.p-run #bw-shinR { transform: rotate(40deg); }
+#guy.p-run #bw-armL { transform: rotate(-34deg); }
+#guy.p-run #bw-armR { transform: rotate(28deg); }
+#guy.p-run #rig { transform: rotate(5deg); }
+
+#guy.p-leap #bw-legL { transform: rotate(52deg); }
+#guy.p-leap #bw-shinL { transform: rotate(-58deg); }
+#guy.p-leap #bw-legR { transform: rotate(-42deg); }
+#guy.p-leap #bw-shinR { transform: rotate(50deg); }
+#guy.p-leap #bw-armL { transform: rotate(-70deg); }
+#guy.p-leap #bw-armR { transform: rotate(45deg); }
+#guy.p-leap #bw-scarf { transform: rotate(14deg); }
+
+#guy.waving #bw-armR {
   animation: wave 0.7s ease-in-out infinite alternate;
 }
 
@@ -812,8 +846,8 @@ html.scene #guy {
 }
 
 @keyframes wave {
-  from { transform: rotate(-60deg); }
-  to { transform: rotate(-100deg); }
+  from { transform: rotate(-100deg); }
+  to { transform: rotate(-140deg); }
 }
 
 /* Belt & suspenders: if the UA prefers reduced motion, kill all
