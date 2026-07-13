@@ -624,6 +624,30 @@ html.scene #ring .card {
   backface-visibility: hidden;
 }
 
+/* the VOINOSIS card carries twice the copy: wider box, tighter type,
+   so it fits the viewport instead of running off the bottom */
+html.scene #ring .card--dense {
+  width: 470px;
+  left: -235px;
+  padding: 20px 26px 18px;
+}
+
+html.scene #ring .card--dense > p:not(.no):not(.tag):not(.for):not(.card-link) {
+  font-size: 12px;
+  line-height: 1.48;
+  margin-top: 10px;
+}
+
+html.scene #ring .card--dense h3 { font-size: 26px; }
+
+html.scene #ring .card--dense .tag { margin: 5px 0 8px; }
+
+html.scene #ring .card--dense .for {
+  margin-top: 12px;
+  padding-top: 10px;
+  font-size: 10px;
+}
+
 html.scene #ring .card::before { display: none; }
 
 html.scene #tl {
@@ -668,7 +692,9 @@ html.scene #contact {
   margin: 0;
   opacity: 0;
   pointer-events: none;
-  background: var(--paper);
+  /* transparent: the ink line stays visible beneath the finale so
+     little Bryan can run along it to the sign-off */
+  background: transparent;
 }
 
 html.scene #contact.live { pointer-events: auto; }

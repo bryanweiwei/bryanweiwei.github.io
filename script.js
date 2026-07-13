@@ -183,6 +183,9 @@
     CHAR.fidgetTl = null;
     CHAR.fidgetKind = 0;
     CHAR.wavePhase = 0;
+    CHAR.lastRunX = 0;
+    CHAR.prevDropT = 0;
+    CHAR.prevFrac = 0;
     CHAR.ready = true;
   }
 
@@ -305,6 +308,18 @@
       killFidget(false);
       CHAR.wavePhase += gsap.ticker.deltaRatio(60) / 60;
       wavePose(CHAR.wavePhase);
+      applyP();
+      return;
+    }
+
+    if (gctx.mode === 'run') {
+      /* sprint: leg cycle churns with horizontal speed */
+      killFidget(false);
+      CHAR.idleSince = now;
+      var dx = (gctx.runX || 0) - (CHAR.lastRunX || 0);
+      CHAR.lastRunX = gctx.runX || 0;
+      CHAR.runPhase += dx / 16;
+      runPose(CHAR.runPhase, 1);
       applyP();
       return;
     }
@@ -440,7 +455,7 @@
     GL.camera = new THREE.PerspectiveCamera(40, vw / vh, 0.1, 40);
     GL.camera.position.set(0, 0, 10);
 
-    GL.inkMat = new THREE.MeshBasicMaterial({ color: 0x0e1611 });
+    GL.inkMat = new THREE.MeshBasicMaterial({ color: 0x0e1611, transparent: true });
     GL.group = new THREE.Group();
     GL.scene.add(GL.group);
 
@@ -511,10 +526,14 @@
     var lxWorld = (-S.slide * 38 / 100) * vw * w;
     GL.group.position.x = lxWorld;
 
+    /* the whole line bows out at the very end, after his run */
+    var lineIn = 1 - (S.lineOut || 0);
+    GL.inkMat.opacity = lineIn;
+
     /* node pop */
-    var ns = GL.nodeBase * (0.001 + S.elbow);
+    var ns = GL.nodeBase * (0.001 + S.elbow) * Math.max(0.001, lineIn);
     GL.node.scale.setScalar(ns);
-    GL.node.children[1].material.opacity = 0.25 * S.elbow;
+    GL.node.children[1].material.opacity = 0.25 * S.elbow * lineIn;
 
     /* camera: swing around the bend (only during the elbow window),
        plus a breathing dolly during the descent beats */
@@ -555,17 +574,21 @@
     var p = master ? master.time() : 0;
     prog.style.width = (master ? master.progress() * 100 : 0) + '%';
 
-    /* lines */
+    /* lines (DOM fallback path; GL owns them when html.scene.gl) */
     var lx = -S.slide * 38;
+    var lineIn = 1 - (S.lineOut || 0);
     vline.style.height = (S.grow * 100 * (1 - S.retract * 0.5)) + 'vh';
     vline.style.marginLeft = lx + 'vw';
+    vline.style.opacity = lineIn;
     node.style.marginLeft = lx + 'vw';
     hline.style.marginLeft = lx + 'vw';
     hline.style.width = (S.elbow * 46 + S.slide * 46) + 'vw';
+    hline.style.opacity = lineIn;
 
     /* ring */
     var MAG = 1300 / (1300 - RADIUS);
-    var ringX = Math.max(0, Math.min(vw * 0.18, (vw / 2 - 300) / MAG));
+    /* 325 = widest (dense) card's apparent half-width + shadow margin */
+    var ringX = Math.max(0, Math.min(vw * 0.18, (vw / 2 - 325) / MAG));
     var u = S.u;
     var shift = u * SPACING;
     ring.style.transform =
@@ -607,8 +630,11 @@
 
     /* ---- little Bryan: position + context (limbs live in guyTick) ---- */
     gctx.p = p;
-    if (p >= 91) {
-      guy.style.opacity = Math.min(1, (p - 91) / 4);
+    var MAGc = 1300 / (1300 - RADIUS);
+    var cardTopX = ringX * MAGc - 235;
+    var cardTopY = 10.4 - 150 * MAGc - 2;
+    if (p >= 93.2) {
+      guy.style.opacity = 1;
       var r = waveAnchor.getBoundingClientRect();
       var wy = r.bottom - vh / 2 + 12;
       guy.style.transform =
@@ -616,11 +642,46 @@
       gctx.mode = 'wave';
       gctx.y = wy;
       gctx.visible = true;
+    } else if (p >= 88.8) {
+      /* the exit: hop off the card onto the line, sprint along it,
+         hop off at the sign-off — the line is his runway home */
+      guy.style.opacity = 1;
+      var ra = waveAnchor.getBoundingClientRect();
+      var tx = ra.left - vw / 2 + 34;
+      var ty = ra.bottom - vh / 2 + 12;
+      var gx2, gy2;
+      if (p < 89.9) {
+        /* hop DOWN from the card top to the line */
+        var d = smooth((p - 88.8) / 1.1);
+        gx2 = cardTopX + 26 * d;
+        gy2 = cardTopY * (1 - d) - Math.sin(Math.PI * d) * 26;
+        if (CHAR.ready && CHAR.prevDropT < 0.97 && d >= 0.97) fireDust();
+        CHAR.prevDropT = d;
+        gctx.mode = 'jump';
+        gctx.frac = Math.max(0.03, Math.min(0.97, d));
+      } else if (p < 92.5) {
+        /* the sprint along the line */
+        var rT = smooth((p - 89.9) / 2.6);
+        gx2 = (cardTopX + 26) + (tx - cardTopX - 26) * rT;
+        gy2 = 0;
+        gctx.mode = 'run';
+        gctx.runX = gx2;
+        CHAR.prevDropT = 0;
+      } else {
+        /* hop off the line onto the sign-off baseline */
+        var d2 = smooth((p - 92.5) / 0.7);
+        gx2 = tx;
+        gy2 = ty * d2 - Math.sin(Math.PI * d2) * 22;
+        gctx.mode = 'jump';
+        gctx.frac = Math.max(0.03, Math.min(0.97, d2));
+      }
+      guy.style.transform = 'translate(' + gx2 + 'px,' + gy2 + 'px)';
+      gctx.y = gy2;
+      gctx.visible = true;
     } else if (p > 6) {
       /* fades out while the camera swings the bend (he ducks around it) */
       var gop =
-        Math.min(1, (p - 6) / 3) * Math.max(0, Math.min(1, (89 - p) / 3)) *
-        (1 - (S.swing || 0));
+        Math.min(1, (p - 6) / 3) * (1 - (S.swing || 0));
       guy.style.opacity = gop.toFixed(3);
       var hop = 0, gx = 0, tilt = 0, frac = 0, moving = false;
       if (p < 39) {
@@ -708,7 +769,7 @@
       }
     });
 
-    S = { grow: 0, retract: 0, elbow: 0, slide: 0, u: 0, ringIn: 0, swing: 0 };
+    S = { grow: 0, retract: 0, elbow: 0, slide: 0, u: 0, ringIn: 0, swing: 0, lineOut: 0 };
 
     initChar();
     guy.classList.remove('p-stand', 'p-run', 'p-leap', 'waving');
@@ -850,6 +911,10 @@
       yPercent: 60, opacity: 0, duration: 3.2,
       ease: 'power3.out', stagger: 0.09
     }, 91);
+
+    /* the line delivered him; it bows out while he waves */
+    master.to(S, { lineOut: 1, duration: 2.6, ease: 'power2.inOut' }, 93.6);
+
     /* pad the tail so the timeline is exactly 100 units — a calm hold
        after the finale, and unit thresholds stay honest */
     var pad = 100 - master.duration();
