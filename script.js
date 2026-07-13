@@ -322,7 +322,9 @@
       CHAR.idleSince = now;
       var dx = (gctx.runX || 0) - (CHAR.lastRunX || 0);
       CHAR.lastRunX = gctx.runX || 0;
-      CHAR.runPhase += dx / 16;
+      /* absolute: being carried left by a centering card still reads
+         as forward running (treadmill), capped so teleports don't spin */
+      CHAR.runPhase += Math.min(3, Math.abs(dx) / 16);
       runPose(CHAR.runPhase, 1);
       applyP();
       return;
@@ -662,9 +664,10 @@
 
     /* ---- little Bryan: position + context (limbs live in guyTick) ---- */
     gctx.p = p;
+    /* exact perch on the front card's top edge (matches cardTopPoint) */
     var MAGc = 1300 / (1300 - RADIUS);
-    var cardTopX = ringX * MAGc - 235;
-    var cardTopY = 10.4 - 150 * MAGc - 2;
+    var cardTopX = (ringX - 174) * MAGc;
+    var cardTopY = -152 * MAGc + 10;
     if (p >= 90.9) {
       /* waves standing ON the settled line, at the sign-off */
       guy.style.opacity = 1;
@@ -746,28 +749,68 @@
         hop = hopArc(frac) * 44;
         tilt = Math.sin(Math.PI * 2 * frac) * 8;
       } else {
-        /* the revolve: he rides ON the front card (its rest position is
-           a fixed screen spot; cards arrive under him like train cars) */
-        frac = u - Math.floor(u);
-        if (u >= N - 1 || u <= 0) frac = 0;
-        moving = frac > 0;
-        var MAGg = 1300 / (1300 - RADIUS);
-        var cardX = ringX * MAGg - 235;              /* left area of the card top */
-        var cardY = 10.4 - 150 * MAGg - 2;           /* feet on the top edge */
+        /* the revolve: he runs across the top of the front card, leaps
+           the gap, and rides the incoming card as it swings to center.
+           All positions come from the exact card-edge math, so the
+           choreography stays glued at any scrub speed. */
+        /* choreography runs in TWEEN-TIME (tt, evenly paced against
+           scroll) while positions use the eased u — so the sprint,
+           leap and ride each get real duration regardless of ease */
+        var PERCH = -174, EDGE = 196, LAND = -252;
         var elbowX = lx * vw / 100 + 10;
+        var pt;
+        tilt = 0;
+
+        var segIdx = Math.max(1, Math.min(N - 1, Math.floor((p - 48.5) / 8) + 1));
+        var segStart = 48.5 + (segIdx - 1) * 8;
+        var tt = Math.max(0, Math.min(1, (p - segStart) / 5.5));
+        var i0 = segIdx - 1, j0 = segIdx;
+
+        function placeGuy(x, y, mode, fracVal, runX) {
+          guy.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+          gctx.mode = mode;
+          gctx.frac = fracVal;
+          if (runX !== undefined) gctx.runX = runX;
+          gctx.y = y;
+          gctx.visible = gop > 0.05;
+        }
+
         if (p < 48) {
           /* one big hop from the elbow onto the first card as it lands */
           var bl = smooth((p - 45.5) / 2.5);
-          gx = elbowX + (cardX - elbowX) * bl;
-          hop = -cardY * bl + hopArc(bl) * 42;       /* container applies -hop */
-          tilt = Math.sin(Math.PI * 2 * bl) * 6;
-          moving = bl > 0 && bl < 1;
-          frac = bl;
+          pt = cardTopPoint(0, u, PERCH, ringX, shift);
+          placeGuy(
+            elbowX + (pt.x - elbowX) * bl,
+            pt.y * bl - hopArc(bl) * 42,
+            (bl > 0.02 && bl < 0.98) ? 'jump' : 'idle',
+            Math.max(0.03, Math.min(0.97, bl)));
+        } else if (p < segStart || tt >= 1) {
+          /* dwell: perched on the settled card */
+          pt = cardTopPoint(p < segStart ? i0 : j0, u, PERCH, ringX, shift);
+          placeGuy(pt.x, pt.y, 'idle', 0);
+        } else if (tt < 0.26) {
+          /* sprint across the top of the outgoing card */
+          var rr = tt / 0.26;
+          pt = cardTopPoint(i0, u, PERCH + (EDGE - PERCH) * rr, ringX, shift);
+          placeGuy(pt.x, pt.y, 'run', 0, pt.x);
+        } else if (tt < 0.60) {
+          /* the leap across the gap, full jump animation */
+          var fl = smooth((tt - 0.26) / 0.34);
+          var a = cardTopPoint(i0, u, EDGE, ringX, shift);
+          var b2 = cardTopPoint(j0, u, LAND, ringX, shift);
+          placeGuy(
+            a.x + (b2.x - a.x) * fl,
+            a.y + (b2.y - a.y) * fl - Math.sin(Math.PI * fl) * 48,
+            'jump',
+            0.18 + fl * 0.74);
         } else {
-          gx = cardX;
-          hop = -cardY + hopArc(frac) * 28;          /* negated below */
-          tilt = Math.sin(Math.PI * 2 * frac) * 5;
+          /* landed: runs along the incoming card while it swings the
+             rest of the way to center under him */
+          var lr = (tt - 0.60) / 0.40;
+          pt = cardTopPoint(j0, u, LAND + (PERCH - LAND) * lr, ringX, shift);
+          placeGuy(pt.x, pt.y, 'run', 0, pt.x);
         }
+        return;
       }
       guy.style.transform =
         'translate(' + gx + 'px,' + (-hop) + 'px) rotate(' + tilt + 'deg)';
@@ -788,6 +831,23 @@
     if (f <= 0) return 0;
     if (f < 0.17) return -Math.sin(Math.PI * (f / 0.17)) * 0.09;
     return Math.sin(Math.PI * (f - 0.17) / 0.83);
+  }
+
+  /* screen position of a point on card k's TOP EDGE, derived from the
+     exact ring transform math — so little Bryan's feet stay glued to
+     the moving card surfaces at any scrub speed or direction.
+     rel = offset along the edge in card-local px (0 = card center). */
+  function cardTopPoint(k, u, rel, ringX, shift) {
+    var theta = (k - u) * STEP * Math.PI / 180;
+    var y0 = -152, z0 = RADIUS;
+    var yw = y0 * Math.cos(theta) - z0 * Math.sin(theta);
+    var zw = y0 * Math.sin(theta) + z0 * Math.cos(theta);
+    var s = 1300 / (1300 - zw);
+    return {
+      x: (k * SPACING - shift + ringX + rel) * s,
+      y: yw * s + 10,   /* +10: feet ON the edge, not hovering */
+      s: s
+    };
   }
 
   function buildScene() {
@@ -940,7 +1000,9 @@
     master.addLabel('card0', 48);
     for (var i = 1; i < N; i++) {
       var seg = 48.5 + (i - 1) * 8;
-      master.to(S, { u: i, duration: 5.5, ease: 'back.out(1.15)' }, seg);
+      /* inOut so the card is still visibly swinging while he rides it
+         in — the leap choreography reads at even pace */
+      master.to(S, { u: i, duration: 5.5, ease: 'power2.inOut' }, seg);
       master.addLabel('card' + i, seg + 6.6);
     }
     /* ghost year drifts slowly upward through the revolve: depth */
