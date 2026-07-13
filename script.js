@@ -285,6 +285,28 @@
     CHAR.fidgetTl = tl;
   }
 
+  /* resting behavior: ease to a stand, then fidget; goes write-silent
+     once fully settled. Shared by idle mode and stalled runs. */
+  function idleBehave(now) {
+    if (!CHAR.fidgetTl) {
+      var maxDelta = 0;
+      Pfields.forEach(function (k) {
+        P[k] += (POSES.stand[k] - P[k]) * 0.12;
+        var d = Math.abs(P[k] - POSES.stand[k]);
+        if (d > maxDelta) maxDelta = d;
+      });
+      if (now - CHAR.idleSince > 2600) startFidget();
+      if (maxDelta < 0.01 && Math.abs(CHAR.scarfV) < 0.02 &&
+          Math.abs(CHAR.scarfA) < 0.05 && !CHAR.fidgetTl) {
+        CHAR.scarfA = 0; CHAR.scarfV = 0;
+        if (!CHAR.settled) { CHAR.settled = true; applyP(); }
+        return;
+      }
+    }
+    CHAR.settled = false;
+    applyP();
+  }
+
   /* character context, written by renderScene each scroll frame */
   var gctx = { mode: 'hidden', frac: 0, visible: false };
 
@@ -317,11 +339,19 @@
     }
 
     if (gctx.mode === 'run') {
-      /* sprint: leg cycle churns with horizontal speed */
-      killFidget(false);
-      CHAR.idleSince = now;
       var dx = (gctx.runX || 0) - (CHAR.lastRunX || 0);
       CHAR.lastRunX = gctx.runX || 0;
+      if (Math.abs(dx) < 0.05) {
+        /* scroll stalled mid-stride: settle to a stand (and fidget)
+           instead of freezing mid-run-pose */
+        CHAR.runStill = (CHAR.runStill || 0) + 1;
+        if (CHAR.runStill > 14) { idleBehave(now); return; }
+        applyP();
+        return;
+      }
+      CHAR.runStill = 0;
+      killFidget(false);
+      CHAR.idleSince = now;
       /* absolute: being carried left by a centering card still reads
          as forward running (treadmill), capped so teleports don't spin */
       CHAR.runPhase += Math.min(3, Math.abs(dx) / 16);
@@ -351,25 +381,7 @@
         applyP();
         return;
       }
-      if (!CHAR.fidgetTl) {
-        /* ease back to standing, then fidget when the scroll rests */
-        var maxDelta = 0;
-        Pfields.forEach(function (k) {
-          P[k] += (POSES.stand[k] - P[k]) * 0.12;
-          var d = Math.abs(P[k] - POSES.stand[k]);
-          if (d > maxDelta) maxDelta = d;
-        });
-        if (now - CHAR.idleSince > 2600) startFidget();
-        /* fully settled: stop writing until something changes */
-        if (maxDelta < 0.01 && Math.abs(CHAR.scarfV) < 0.02 &&
-            Math.abs(CHAR.scarfA) < 0.05 && !CHAR.fidgetTl) {
-          CHAR.scarfA = 0; CHAR.scarfV = 0;
-          if (!CHAR.settled) { CHAR.settled = true; applyP(); }
-          return;
-        }
-      }
-      CHAR.settled = false;
-      applyP();
+      idleBehave(now);
       return;
     }
 
@@ -775,6 +787,9 @@
           gctx.visible = gop > 0.05;
         }
 
+        /* leap window inside each segment (tween-time units) */
+        var LS = segStart + 1.43, LE = segStart + 3.3;
+
         if (p < 48) {
           /* one big hop from the elbow onto the first card as it lands */
           var bl = smooth((p - 45.5) / 2.5);
@@ -784,18 +799,18 @@
             pt.y * bl - hopArc(bl) * 42,
             (bl > 0.02 && bl < 0.98) ? 'jump' : 'idle',
             Math.max(0.03, Math.min(0.97, bl)));
-        } else if (p < segStart || tt >= 1) {
-          /* dwell: perched on the settled card */
-          pt = cardTopPoint(p < segStart ? i0 : j0, u, PERCH, ringX, shift);
-          placeGuy(pt.x, pt.y, 'idle', 0);
-        } else if (tt < 0.26) {
-          /* sprint across the top of the outgoing card */
-          var rr = tt / 0.26;
-          pt = cardTopPoint(i0, u, PERCH + (EDGE - PERCH) * rr, ringX, shift);
+        } else if (p < LS) {
+          /* continuous traverse of the current card: from where he
+             landed, across the settled card, into the next takeoff —
+             no parked dwell, he moves whenever the scroll moves */
+          var t0 = segIdx === 1 ? 48 : segStart - 4.7;  /* prev landing */
+          var r0 = segIdx === 1 ? PERCH : LAND;
+          var tr = Math.max(0, Math.min(1, (p - t0) / (LS - t0)));
+          pt = cardTopPoint(i0, u, r0 + (EDGE - r0) * tr, ringX, shift);
           placeGuy(pt.x, pt.y, 'run', 0, pt.x);
-        } else if (tt < 0.60) {
+        } else if (p < LE) {
           /* the leap across the gap, full jump animation */
-          var fl = smooth((tt - 0.26) / 0.34);
+          var fl = smooth((p - LS) / (LE - LS));
           var a = cardTopPoint(i0, u, EDGE, ringX, shift);
           var b2 = cardTopPoint(j0, u, LAND, ringX, shift);
           placeGuy(
@@ -804,10 +819,18 @@
             'jump',
             0.18 + fl * 0.74);
         } else {
-          /* landed: runs along the incoming card while it swings the
-             rest of the way to center under him */
-          var lr = (tt - 0.60) / 0.40;
-          pt = cardTopPoint(j0, u, LAND + (PERCH - LAND) * lr, ringX, shift);
+          /* landed on the incoming card (still swinging in): walk on
+             toward the next takeoff — or, on the last card, settle
+             toward the perch where the exit hop begins */
+          var rel2;
+          if (segIdx === N - 1) {
+            var tr2 = Math.min(1, (p - LE) / (80.5 - LE));
+            rel2 = LAND + (PERCH - LAND) * tr2;
+          } else {
+            var nextLS = segStart + 8 + 1.43;
+            rel2 = LAND + (EDGE - LAND) * ((p - LE) / (nextLS - LE));
+          }
+          pt = cardTopPoint(j0, u, rel2, ringX, shift);
           placeGuy(pt.x, pt.y, 'run', 0, pt.x);
         }
         return;
