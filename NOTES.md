@@ -57,16 +57,29 @@ layout; no WebGL → DOM line elements run the same choreography.
    Bryan's headshot sits framed low-right in the sign-off (below the docked
    line and the wave, so nothing overlaps).
 
-### Images (added after the C-phase review)
+### Images (added after the C-phase review, reworked after review)
 
-Photos are HTML + CSS only — no timeline, geometry, or mascot code touched.
-`cardTopPoint` never reads card content, and cards are anchored at their top
-edge and grow downward, so a photo below the headline cannot move the runner.
-The only real constraint is height: card-05 (VOINOSIS, longest copy + tightest
-box) is the stress case, so its logo panel is capped short. Scene-mode photo
-heights are the tuned numbers (`.card-fig img` ~116px, dense logo ~64px). One
-regression fixed: the copy-page-as-Markdown builder selected `h3 + p`, which
-the new `<figure>` broke — now `h3 ~ p`.
+Photos are HTML + CSS only — no timeline or mascot code touched. Each work
+card carries a framed "plate" under its headline: the whole project image
+CONTAINED (never force-cropped) and centered on a soft mat, so a wide
+dashboard, a tall phone mockup and a publication cover each read as
+themselves. Plate heights are the tuned numbers (`.card-fig` ~96px scene /
+196px flow; dense ~76px). VOINOSIS shows its logo on mint.
+
+**The transform-origin invariant (important).** Each card is a 3D-rotated
+element; its rotation pivots about `transform-origin`. `cardTopPoint()`
+assumes that pivot sits 152px below the card's top edge (true only when a
+card is ~304px tall and the origin is left at the default 50% 50%). Taller
+cards (images) shifted the center-origin down, so each card's top edge landed
+somewhere different while little Bryan stayed put — his running line looked
+inconsistent card to card. Fix: pin `html.scene #ring .card { transform-origin:
+50% 152px }` so the pivot no longer drifts with height, and he stays glued to
+the top edge for ANY card content. Do not remove this when changing card
+heights. Because the plate adds height, scene plate heights are kept short so
+footers clear the viewport down to ~665px tall (verified at 720).
+
+One regression fixed earlier: the copy-page-as-Markdown builder selected
+`h3 + p`, which the inserted `<figure>` broke — now `h3 ~ p`.
 
 ## Little Bryan (the mascot got the works)
 

@@ -294,31 +294,35 @@ nav .logo {
   color: var(--accent);
 }
 
-/* framed "lead photo" on each work card (flow + mobile defaults) */
+/* framed "plate" on each work card: the whole project image, CONTAINED
+   (never force-cropped) and centered on a soft mat — so a wide dashboard,
+   a tall phone mockup and a publication cover each read as themselves,
+   like clippings pinned to the page (flow + mobile defaults) */
 .card-fig {
   margin: 16px 0 4px;
+  height: 196px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
   border: 2px solid var(--ink);
   box-shadow: 6px 6px 0 rgba(14, 22, 17, 0.10);
-  background: var(--paper);
+  background: #e8f0ea;
   overflow: hidden;
 }
 
 .card-fig img {
   display: block;
-  width: 100%;
-  aspect-ratio: 16 / 10;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
   height: auto;
-  object-fit: cover;
-}
-
-/* logo cards (VOINOSIS): contain, don't crop, sit on a soft panel */
-.card-fig--logo { background: var(--mint); }
-
-.card-fig--logo img {
-  aspect-ratio: 16 / 7;
   object-fit: contain;
-  padding: 14px 20px;
 }
+
+/* logo cards (VOINOSIS): sit on the brand mint */
+.card-fig--logo { background: var(--mint); }
+.card-fig--logo img { max-height: 92px; }
 
 /* headshot in the sign-off column */
 .byline-photo {
@@ -665,6 +669,11 @@ html.scene #ring .card {
   top: -150px;
   margin: 0;
   backface-visibility: hidden;
+  /* pin the 3D rotation pivot to a fixed point (152px below the card's top
+     edge) so it does NOT drift with card height. cardTopPoint() assumes this
+     exact pivot, so little Bryan stays glued to the top edge no matter how
+     tall a card's content (image) makes it. */
+  transform-origin: 50% 152px;
 }
 
 /* the VOINOSIS card carries twice the copy: wider box, tighter type,
@@ -694,21 +703,17 @@ html.scene #ring .card--dense .for {
 /* scene mode: cap photo height so cards stay inside the viewport box budget
    (cards are anchored at top:-150px and grow downward; little Bryan runs on
    the fixed top edge, well above the photo, so this never touches him) */
-html.scene #ring .card-fig { margin: 12px 0 2px; box-shadow: 4px 4px 0 rgba(14, 22, 17, 0.10); }
-
-html.scene #ring .card-fig img {
-  aspect-ratio: auto;
-  height: 116px;
+html.scene #ring .card-fig {
+  margin: 11px 0 2px;
+  height: 96px;
+  padding: 8px;
+  box-shadow: 4px 4px 0 rgba(14, 22, 17, 0.10);
 }
 
-html.scene #ring .card-fig--logo img {
-  height: 74px;
-  padding: 12px 18px;
-}
+html.scene #ring .card-fig--logo img { max-height: 58px; }
 
-/* the dense VOINOSIS card has the tightest budget: shortest logo panel */
-html.scene #ring .card--dense .card-fig { margin: 9px 0 2px; }
-html.scene #ring .card--dense .card-fig--logo img { height: 64px; padding: 10px 16px; }
+/* the dense VOINOSIS card has the tightest budget: shortest plate */
+html.scene #ring .card--dense .card-fig { margin: 8px 0 2px; height: 76px; }
 
 html.scene #ring .card::before { display: none; }
 
