@@ -47,7 +47,12 @@ layout; no WebGL → DOM line elements run the same choreography.
    speeds, and for a beat it's just the runner on an endless line. The end page
    arrives WITH the camera (slides in from the right as the dolly decelerates),
    and the line eases down and docks as the broadsheet rule under the sign-off.
-6. **Home** (calm): he waves from the line at "Say hi." — bounce, wrist
+6. **The sign-off** (payoff): as he runs the last stretch, "Say hi." draws
+   itself in left-to-right — letters and green underline revealed by a clip
+   whose edge tracks his feet — then he springs up, does a full forward flip
+   over the period, and lands on it. All a pure function of scroll progress,
+   so it plays backward when you scrub up.
+7. **Home** (calm): he waves from the line at "Say hi." — bounce, wrist
    follow-through, pleased head tilt. Composed snap point; long quiet tail.
    Bryan's headshot sits framed low-right in the sign-off (below the docked
    line and the wave, so nothing overlaps).

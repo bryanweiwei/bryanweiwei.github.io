@@ -103,6 +103,7 @@
   }
 
   var wordSplits = { st: null, end: null };
+  var sayHiLink = null;
   function splitCopy() {
     if (!wordSplits.st) {
       wordSplits.st = stations.map(function (s) {
@@ -113,8 +114,11 @@
       var h2 = end.querySelector('h2');
       var link = h2.querySelector('a');
       var words = splitUnits(h2, 'w');
-      /* the link stays whole (one unit) so it remains a single tab stop */
-      wordSplits.end = words.filter(function (w) { return !link.contains(w); }).concat([link]);
+      /* the link stays whole (one unit) so it remains a single tab stop;
+         it is kept OUT of the word-rise stagger and instead drawn in by
+         position (clip) as little Bryan runs past it in the finale */
+      wordSplits.end = words.filter(function (w) { return !link.contains(w); });
+      sayHiLink = link;
     }
   }
 
@@ -186,6 +190,7 @@
     CHAR.lastRunX = 0;
     CHAR.prevDropT = 0;
     CHAR.prevFrac = 0;
+    CHAR.lastClip = -1;
     CHAR.ready = true;
   }
 
@@ -313,6 +318,20 @@
   /* screen offset (from center) where the line settles in the finale:
      the rule under the sign-off. Measured from the wave anchor. */
   var dropPx = 0;
+
+  /* the sign-off link ("Say hi.") reveals left-to-right: its letters and
+     green underline drawn in as little Bryan runs past, via a clip whose
+     right edge tracks his feet. Quantized + deduped so it stays
+     write-silent whenever nothing changes. */
+  function revealSayHi(f) {
+    if (!sayHiLink) return;
+    f = f < 0 ? 0 : f > 1 ? 1 : f;
+    var q = Math.round(f * 200) / 200;
+    if (q === CHAR.lastClip) return;
+    CHAR.lastClip = q;
+    sayHiLink.style.clipPath =
+      q >= 1 ? 'none' : 'inset(-8px ' + ((1 - q) * 100).toFixed(2) + '% -10px -4px)';
+  }
 
   function guyTick() {
     if (!CHAR.ready || !inScene()) return;
@@ -680,6 +699,7 @@
     var MAGc = 1300 / (1300 - RADIUS);
     var cardTopX = (ringX - 174) * MAGc;
     var cardTopY = -152 * MAGc + 10;
+    if (p < 80.5) revealSayHi(0);   /* the sign-off stays hidden until the run */
     if (p >= 90.9) {
       /* waves standing ON the settled line, at the sign-off */
       guy.style.opacity = 1;
@@ -692,11 +712,12 @@
       gctx.mode = 'wave';
       gctx.y = wy;
       gctx.visible = true;
+      revealSayHi(1);                /* "Say hi." fully drawn in */
     } else if (p >= 80.5) {
       /* the exit: hop off the card onto the line, then RUN as the
          camera dollies onward — he holds the left third of the frame
-         while the world streams past — then arrives at the sign-off
-         as the line docks into the end page */
+         while the world streams past — then arrives at the sign-off,
+         drawing "Say hi." in as he passes and flipping onto the period */
       guy.style.opacity = 1;
       var ra = waveAnchor.getBoundingClientRect();
       dropPx = ra.bottom + 6 - vh / 2;
@@ -705,7 +726,8 @@
       var lineY = dropPx * (S.lineDrop || 0);  /* the line's current y */
       var travelPx2 = (S.travel || 0) * 2.2 * vw;
       var holdX = -vw * 0.16;                  /* his framing during the dolly */
-      var gx2, gy2;
+      var takeoffX = tx - 74;                  /* springs onto the period from here */
+      var gx2, gy2, flipDeg = 0;
       if (p < 81.6) {
         /* hop DOWN from the card top to the line */
         var d = smooth((p - 80.5) / 1.1);
@@ -723,23 +745,41 @@
         gctx.mode = 'run';
         gctx.runX = travelPx2 + gx2;   /* ground-relative: legs churn with the dolly */
         CHAR.prevDropT = 0;
-      } else if (p < 90.2) {
-        /* arrival: runs the last stretch to the sign-off as the line docks */
-        var rT = smooth((p - 88.2) / 2.0);
-        gx2 = holdX + (tx - holdX) * rT;
+      } else if (p < 89.3) {
+        /* arrival: runs the last stretch, drawing in "Say hi." as he goes */
+        var rT = smooth((p - 88.2) / 1.1);
+        gx2 = holdX + (takeoffX - holdX) * rT;
         gy2 = lineY;
         gctx.mode = 'run';
         gctx.runX = travelPx2 + gx2;
+      } else if (p < 90.5) {
+        /* the flourish: springs up, a full forward flip, lands on the
+           period at the sign-off — a pure function of progress, scrub-safe */
+        var fF = (p - 89.3) / 1.2;
+        var eF = smooth(fF);
+        gx2 = takeoffX + (tx - takeoffX) * eF;
+        gy2 = lineY - Math.sin(Math.PI * fF) * 82;
+        flipDeg = 360 * smooth(Math.min(1, fF / 0.9));
+        gctx.mode = 'jump';
+        gctx.frac = Math.max(0.03, Math.min(0.97, fF));
       } else {
-        /* settle to a stand; the wave takes over at home */
+        /* landed: settle to a stand; the wave takes over at home */
         gx2 = tx;
         gy2 = lineY;
         gctx.mode = 'idle';
         gctx.frac = 0;
       }
-      guy.style.transform = 'translate(' + gx2 + 'px,' + gy2 + 'px)';
+      guy.style.transform =
+        'translate(' + gx2 + 'px,' + gy2 + 'px) rotate(' + flipDeg + 'deg)';
       gctx.y = gy2;
       gctx.visible = true;
+      /* draw "Say hi." in left-to-right, its edge tracking his feet */
+      if (p < 88.2) {
+        revealSayHi(0);
+      } else {
+        var lr = sayHiLink ? sayHiLink.getBoundingClientRect() : null;
+        if (lr && lr.width > 0) revealSayHi((gx2 + vw / 2 + 6 - lr.left) / lr.width);
+      }
     } else if (p > 6) {
       /* fades out while the camera swings the bend (he ducks around it) */
       var gop =
@@ -1109,6 +1149,7 @@
         gsap.set(wordSplits.end, { clearProps: 'all' });
       }
     }
+    if (sayHiLink) { sayHiLink.style.clipPath = ''; if (CHAR.ready) CHAR.lastClip = -1; }
     [vline, hline, node, ring, yearEl, guy].concat(cards).forEach(function (el) {
       el.removeAttribute('style');
     });
