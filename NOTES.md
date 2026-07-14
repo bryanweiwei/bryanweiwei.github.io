@@ -32,7 +32,10 @@ layout; no WebGL → DOM line elements run the same choreography.
    Confined to the window where nothing DOM-registered is visible, so GL/DOM
    registration never breaks. Little Bryan ducks around the bend.
 4. **The revolve** (playful): five cards take turns facing front with eased
-   settling. Little Bryan lives ON the cards: sprints across each top edge,
+   settling. Each card now carries a framed "lead photo" under its headline
+   (newspaper-article style); VOINOSIS shows its logo on a mint panel. The
+   photos sit mid-card, below the top edge, so they never touch the mascot.
+   Little Bryan lives ON the cards: sprints across each top edge,
    leaps the gap with full jump animation, lands on the incoming card while it
    is still swinging to center, and keeps moving whenever the scroll moves (no
    parked dwell — verified zero still-frames across a cycle). A soft shadow
@@ -46,6 +49,19 @@ layout; no WebGL → DOM line elements run the same choreography.
    and the line eases down and docks as the broadsheet rule under the sign-off.
 6. **Home** (calm): he waves from the line at "Say hi." — bounce, wrist
    follow-through, pleased head tilt. Composed snap point; long quiet tail.
+   Bryan's headshot sits framed low-right in the sign-off (below the docked
+   line and the wave, so nothing overlaps).
+
+### Images (added after the C-phase review)
+
+Photos are HTML + CSS only — no timeline, geometry, or mascot code touched.
+`cardTopPoint` never reads card content, and cards are anchored at their top
+edge and grow downward, so a photo below the headline cannot move the runner.
+The only real constraint is height: card-05 (VOINOSIS, longest copy + tightest
+box) is the stress case, so its logo panel is capped short. Scene-mode photo
+heights are the tuned numbers (`.card-fig img` ~116px, dense logo ~64px). One
+regression fixed: the copy-page-as-Markdown builder selected `h3 + p`, which
+the new `<figure>` broke — now `h3 ~ p`.
 
 ## Little Bryan (the mascot got the works)
 

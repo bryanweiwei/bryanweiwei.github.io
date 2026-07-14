@@ -1339,7 +1339,7 @@
     var title = c.querySelector('h3').textContent;
     var no = c.querySelector('.no').textContent;
     var tag = c.querySelector('.tag').textContent;
-    var body = c.querySelector('h3 + p').textContent;
+    var body = c.querySelector('h3 ~ p').textContent;
     var link = c.querySelector('.card-link a');
     var forLine = c.querySelector('.for').textContent;
     PAGE_MD.push('### ' + no + ' · ' + title + ' — ' + tag, '', body);

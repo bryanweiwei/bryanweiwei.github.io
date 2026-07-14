@@ -294,6 +294,49 @@ nav .logo {
   color: var(--accent);
 }
 
+/* framed "lead photo" on each work card (flow + mobile defaults) */
+.card-fig {
+  margin: 16px 0 4px;
+  border: 2px solid var(--ink);
+  box-shadow: 6px 6px 0 rgba(14, 22, 17, 0.10);
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.card-fig img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  height: auto;
+  object-fit: cover;
+}
+
+/* logo cards (VOINOSIS): contain, don't crop, sit on a soft panel */
+.card-fig--logo { background: var(--mint); }
+
+.card-fig--logo img {
+  aspect-ratio: 16 / 7;
+  object-fit: contain;
+  padding: 14px 20px;
+}
+
+/* headshot in the sign-off column */
+.byline-photo {
+  margin: 0 0 14px auto;
+  width: 92px;
+  height: 92px;
+  border: 2px solid var(--ink);
+  box-shadow: 5px 5px 0 rgba(14, 22, 17, 0.12);
+  overflow: hidden;
+}
+
+.byline-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 /* ---------- 6. Shared type: finale ---------- */
 
 #end-inner h2 {
@@ -647,6 +690,25 @@ html.scene #ring .card--dense .for {
   padding-top: 10px;
   font-size: 10px;
 }
+
+/* scene mode: cap photo height so cards stay inside the viewport box budget
+   (cards are anchored at top:-150px and grow downward; little Bryan runs on
+   the fixed top edge, well above the photo, so this never touches him) */
+html.scene #ring .card-fig { margin: 12px 0 2px; box-shadow: 4px 4px 0 rgba(14, 22, 17, 0.10); }
+
+html.scene #ring .card-fig img {
+  aspect-ratio: auto;
+  height: 116px;
+}
+
+html.scene #ring .card-fig--logo img {
+  height: 74px;
+  padding: 12px 18px;
+}
+
+/* the dense VOINOSIS card has the tightest budget: shortest logo panel */
+html.scene #ring .card--dense .card-fig { margin: 9px 0 2px; }
+html.scene #ring .card--dense .card-fig--logo img { height: 64px; padding: 10px 16px; }
 
 html.scene #ring .card::before { display: none; }
 
