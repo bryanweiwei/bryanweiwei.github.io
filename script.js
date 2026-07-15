@@ -1419,24 +1419,25 @@
 
     function phrase(ev) {
       var repo = ev.repo ? ev.repo.name : '';
+      var link = repo ? '<b><a href="https://github.com/' + repo + '" target="_blank" rel="noopener">' + repo + '</a></b>' : '<b>' + repo + '</b>';
       switch (ev.type) {
         case 'PushEvent':
           var n = ev.payload && ev.payload.commits ? ev.payload.commits.length : 1;
-          return 'Pushed ' + n + ' commit' + (n === 1 ? '' : 's') + ' to <b>' + repo + '</b>';
+          return 'Pushed ' + n + ' commit' + (n === 1 ? '' : 's') + ' to ' + link;
         case 'CreateEvent':
-          return 'Created ' + (ev.payload ? ev.payload.ref_type : 'repo') + ' in <b>' + repo + '</b>';
+          return 'Created ' + (ev.payload ? ev.payload.ref_type : 'repo') + ' in ' + link;
         case 'PullRequestEvent':
-          return (ev.payload && ev.payload.action === 'closed' ? 'Merged' : 'Opened') + ' a pull request in <b>' + repo + '</b>';
+          return (ev.payload && ev.payload.action === 'closed' ? 'Merged' : 'Opened') + ' a pull request in ' + link;
         case 'IssuesEvent':
-          return 'Issue activity in <b>' + repo + '</b>';
+          return 'Issue activity in ' + link;
         case 'WatchEvent':
-          return 'Starred <b>' + repo + '</b>';
+          return 'Starred ' + link;
         case 'ForkEvent':
-          return 'Forked <b>' + repo + '</b>';
+          return 'Forked ' + link;
         case 'ReleaseEvent':
-          return 'Published a release in <b>' + repo + '</b>';
+          return 'Published a release in ' + link;
         default:
-          return 'Activity in <b>' + repo + '</b>';
+          return 'Activity in ' + link;
       }
     }
 

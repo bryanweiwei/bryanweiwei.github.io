@@ -410,6 +410,7 @@ nav .logo {
 }
 
 #gh li b { color: var(--ink); font-weight: 600; }
+#gh li b a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--mint); }
 
 #gh li:last-child { border-bottom: none; }
 
@@ -586,6 +587,7 @@ html.scene .hero {
   z-index: 5;
   padding-top: 15vh;
   pointer-events: none;
+  background: var(--paper);
 }
 
 html.scene .hero .hint { display: block; animation: pulse 2.2s ease-in-out infinite; }
@@ -761,7 +763,14 @@ html.scene #contact.live { pointer-events: auto; }
 
 /* GitHub strip would overflow the height-constrained scene panel — keep it
    flow-only; the strip stays visible when scene isn't active */
-html.scene #gh { display: none; }
+html.scene #gh {
+  position: absolute;
+  bottom: 4vh;
+  left: 4vw;
+  right: 4vw;
+  margin: 0;
+  padding-top: 12px;
+}
 
 /* ---------- 9. Little Bryan ---------- */
 
