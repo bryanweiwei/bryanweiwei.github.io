@@ -58,7 +58,21 @@ layout; no WebGL → DOM line elements run the same choreography.
 7. **Home** (calm): he waves from the line at "Say hi." — bounce, wrist
    follow-through, pleased head tilt. Composed snap point; long quiet tail.
    Bryan's headshot sits framed low-right in the sign-off (below the docked
-   line and the wave, so nothing overlaps).
+   line and the wave, so nothing overlaps). The docked line sits ~30px
+   below the sign-off's last row (`waveAnchor.bottom + 30`, home + exit
+   branches) so it reads as a rule UNDER the headline, not through it.
+
+### The sign-off footer (scene)
+
+The scene contact panel is top-anchored (`justify-content: flex-start`),
+so the huge headline holds a fixed spot below the nav and the panel top
+never crops. Stats and the "Recently on GitHub" strip share a left column
+(`.foot-left`), so the GitHub lines fill the space beside the taller
+contact block instead of stacking below the sign-off and pushing the panel
+past the viewport (the earlier crop). The strip is capped at 3 lines with
+no expand control, so recent activity never shifts anything above it;
+lines dedup on the whole phrase+time so several pushes to one repo each
+show, and repo names link to github.com/&lt;repo&gt;.
 
 ### Images
 
@@ -125,8 +139,11 @@ card positions are solved from the exact ring-transform math every frame
   and waves at the bottom. No scroll-jacking, no Lenis.
 - **Reduced motion**: fully static single-column render, zero running
   animations (verified by emulation), little Bryan in a static stand.
-- Palette (Ctrl/Cmd+K), GitHub strip, llms.txt, copy-as-Markdown all carried
-  over from v3 unchanged; palette jumps map to timeline labels in scene mode.
+- Palette (Ctrl/Cmd+K), llms.txt, copy-as-Markdown all carried over from v3
+  unchanged; palette jumps map to timeline labels in scene mode. The GitHub
+  strip moved into the sign-off's `.foot-left` column and is capped at 3
+  linked lines (see "The sign-off footer" above); in flow/mobile the same
+  column stacks full-width under the stats.
 
 ## Known rough edges (honest list)
 
