@@ -142,14 +142,6 @@ nav .logo {
   padding: 13vh 4vw 10vh;
 }
 
-.hero .eyebrow {
-  font-size: 11px;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: var(--soft);
-  margin-bottom: 24px;
-}
-
 .hero h1 {
   font-family: var(--serif);
   font-weight: 640;
@@ -168,6 +160,31 @@ nav .logo {
   font-weight: 420;
   color: var(--accent);
   text-transform: none;
+}
+
+.hero-sub {
+  font-family: var(--serif);
+  font-weight: 640;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  font-size: clamp(18px, 2.6vw, 36px);
+  line-height: 1.1;
+  margin-top: 0.45em;
+}
+
+.hero-sub em {
+  font-style: italic;
+  font-weight: 420;
+  text-transform: none;
+  color: var(--accent);
+}
+
+.hero-proof {
+  font-size: clamp(12px, 1vw, 15px);
+  color: var(--soft);
+  margin-top: 14px;
+  line-height: 1.55;
+  max-width: 48ch;
 }
 
 .hero .hint {
@@ -595,6 +612,15 @@ html.scene .hero .hint { display: block; animation: pulse 2.2s ease-in-out infin
    until the character stagger takes over (no flash before JS runs) */
 html.scene .hero h1 .rise { transform: translateY(112%); }
 
+/* sub-headline and proof start hidden, then fade in after the name stagger */
+html.scene .hero-sub,
+html.scene .hero-proof {
+  opacity: 0;
+  animation: heroSupportIn 0.5s ease forwards;
+}
+html.scene .hero-sub  { animation-delay: 0.7s; }
+html.scene .hero-proof { animation-delay: 0.95s; }
+
 /* split units (created by JS in scene mode) */
 .ch, .w { display: inline-block; will-change: transform; }
 
@@ -940,6 +966,10 @@ html.scene #guy {
 @keyframes pulse {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 1; }
+}
+
+@keyframes heroSupportIn {
+  to { opacity: 1; }
 }
 
 @keyframes wave {

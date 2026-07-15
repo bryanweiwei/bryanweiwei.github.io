@@ -94,7 +94,7 @@
     var h1 = hero.querySelector('h1');
     var sr = document.createElement('span');
     sr.className = 'sr-only';
-    sr.textContent = 'Ships real things for real people.';
+    sr.textContent = 'Bryan Wei';
     h1.insertBefore(sr, h1.firstChild);
     var rows = [].slice.call(h1.querySelectorAll('.row'));
     rows.forEach(function (r) { r.setAttribute('aria-hidden', 'true'); });

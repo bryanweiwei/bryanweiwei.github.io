@@ -23,7 +23,11 @@ layout; no WebGL → DOM line elements run the same choreography.
 
 ## The experience, beat by beat
 
-1. **Hero** (deliberate): character-stagger headline rise; the ink line draws down.
+1. **Hero** (identity-first): Bryan Wei's name is the large display element — two
+   rows of oversized serif uppercase with the character-stagger rise animation.
+   Below it, a bold secondary line ("Builds real things for real people." with
+   the italic accent on "real people") and a one-sentence proof fade in via
+   CSS animation in sequence. The ink line draws down as the hero holds.
 2. **Descent** (rhythmic): one beat per station — enter, settle composed, exit.
    Ghost roman numerals drift behind at a slower parallax rate. Little Bryan
    takes one long readable hop per station gap, grounded at every stop.
