@@ -36,9 +36,8 @@ layout; no WebGL → DOM line elements run the same choreography.
    Confined to the window where nothing DOM-registered is visible, so GL/DOM
    registration never breaks. Little Bryan ducks around the bend.
 4. **The revolve** (playful): five cards take turns facing front with eased
-   settling. Each card now carries a framed "lead photo" under its headline
-   (newspaper-article style); VOINOSIS shows its logo on a mint panel. The
-   photos sit mid-card, below the top edge, so they never touch the mascot.
+   settling. Cards are pure editorial: number, tag, headline, body, and the
+   "Shipped for:" line — no project images. Clean broadsheet.
    Little Bryan lives ON the cards: sprints across each top edge,
    leaps the gap with full jump animation, lands on the incoming card while it
    is still swinging to center, and keeps moving whenever the scroll moves (no
@@ -61,26 +60,22 @@ layout; no WebGL → DOM line elements run the same choreography.
    Bryan's headshot sits framed low-right in the sign-off (below the docked
    line and the wave, so nothing overlaps).
 
-### Images (added after the C-phase review, reworked after review)
+### Images
 
-Photos are HTML + CSS only — no timeline or mascot code touched. Each work
-card carries a framed "plate" under its headline: the whole project image
-CONTAINED (never force-cropped) and centered on a soft mat, so a wide
-dashboard, a tall phone mockup and a publication cover each read as
-themselves. Plate heights are the tuned numbers (`.card-fig` ~96px scene /
-196px flow; dense ~76px). VOINOSIS shows its logo on mint.
+Project card images were removed after review (editorial cards are cleaner;
+the images felt added for the sake of adding). Assets remain in `images/`
+(project-1..4.jpg, voinosis-logo.png) if they ever make sense later. The
+only image in the page is the byline headshot (`images/headshot.jpg`,
+`.byline-photo`) in the sign-off column.
 
 **The transform-origin invariant (important).** Each card is a 3D-rotated
 element; its rotation pivots about `transform-origin`. `cardTopPoint()`
 assumes that pivot sits 152px below the card's top edge (true only when a
-card is ~304px tall and the origin is left at the default 50% 50%). Taller
-cards (images) shifted the center-origin down, so each card's top edge landed
-somewhere different while little Bryan stayed put — his running line looked
-inconsistent card to card. Fix: pin `html.scene #ring .card { transform-origin:
-50% 152px }` so the pivot no longer drifts with height, and he stays glued to
-the top edge for ANY card content. Do not remove this when changing card
-heights. Because the plate adds height, scene plate heights are kept short so
-footers clear the viewport down to ~665px tall (verified at 720).
+card is ~304px tall and the origin is left at the default 50% 50%). Fix:
+`html.scene #ring .card { transform-origin: 50% 152px }` pins the pivot to
+a fixed distance from the top edge regardless of card height, so little Bryan
+stays glued for ANY card content. Do not remove this when changing card
+heights.
 
 One regression fixed earlier: the copy-page-as-Markdown builder selected
 `h3 + p`, which the inserted `<figure>` broke — now `h3 ~ p`.

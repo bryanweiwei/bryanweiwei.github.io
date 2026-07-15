@@ -311,36 +311,6 @@ nav .logo {
   color: var(--accent);
 }
 
-/* framed "plate" on each work card: the whole project image, CONTAINED
-   (never force-cropped) and centered on a soft mat — so a wide dashboard,
-   a tall phone mockup and a publication cover each read as themselves,
-   like clippings pinned to the page (flow + mobile defaults) */
-.card-fig {
-  margin: 16px 0 4px;
-  height: 196px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-  border: 2px solid var(--ink);
-  box-shadow: 6px 6px 0 rgba(14, 22, 17, 0.10);
-  background: #e8f0ea;
-  overflow: hidden;
-}
-
-.card-fig img {
-  display: block;
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-}
-
-/* logo cards (VOINOSIS): sit on the brand mint */
-.card-fig--logo { background: var(--mint); }
-.card-fig--logo img { max-height: 92px; }
-
 /* headshot in the sign-off column */
 .byline-photo {
   margin: 0 0 14px auto;
@@ -725,21 +695,6 @@ html.scene #ring .card--dense .for {
   padding-top: 10px;
   font-size: 10px;
 }
-
-/* scene mode: cap photo height so cards stay inside the viewport box budget
-   (cards are anchored at top:-150px and grow downward; little Bryan runs on
-   the fixed top edge, well above the photo, so this never touches him) */
-html.scene #ring .card-fig {
-  margin: 11px 0 2px;
-  height: 96px;
-  padding: 8px;
-  box-shadow: 4px 4px 0 rgba(14, 22, 17, 0.10);
-}
-
-html.scene #ring .card-fig--logo img { max-height: 58px; }
-
-/* the dense VOINOSIS card has the tightest budget: shortest plate */
-html.scene #ring .card--dense .card-fig { margin: 8px 0 2px; height: 76px; }
 
 html.scene #ring .card::before { display: none; }
 
