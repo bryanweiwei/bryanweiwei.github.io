@@ -704,7 +704,7 @@
       /* waves standing ON the settled line, at the sign-off */
       guy.style.opacity = 1;
       var r = waveAnchor.getBoundingClientRect();
-      dropPx = r.bottom + 6 - vh / 2;
+      dropPx = r.bottom + 30 - vh / 2;
       if (GL.ready) GL.dropPx = dropPx;
       var wy = dropPx;
       guy.style.transform =
@@ -720,7 +720,7 @@
          drawing "Say hi." in as he passes and flipping onto the period */
       guy.style.opacity = 1;
       var ra = waveAnchor.getBoundingClientRect();
-      dropPx = ra.bottom + 6 - vh / 2;
+      dropPx = ra.bottom + 30 - vh / 2;
       if (GL.ready) GL.dropPx = dropPx;
       var tx = ra.left - vw / 2 + 34;
       var lineY = dropPx * (S.lineDrop || 0);  /* the line's current y */
@@ -1441,37 +1441,24 @@
       }
     }
 
+    /* fixed count: enough recent activity to feel alive, capped so the
+       end-page footer never grows and shifts the layout above it */
+    var MAX_EVENTS = 3;
+
     function render(events) {
-      var seen = [];
+      /* dedup whole lines (phrase + relative time) rather than the phrase
+         alone, so several recent pushes to the same repo still each show up
+         instead of collapsing to a single line */
+      var lines = [];
       events.some(function (ev) {
-        var p = phrase(ev);
-        if (seen.some(function (s) { return s.p === p; })) return false;
-        seen.push({ p: p, t: ev.created_at });
-        return seen.length >= 5;
+        var line = phrase(ev) + ' \xB7 ' + rel(ev.created_at);
+        if (lines.indexOf(line) === -1) lines.push(line);
+        return lines.length >= MAX_EVENTS;
       });
-      if (!seen.length) return;
-      list.innerHTML = '<li>' + seen[0].p + ' \xB7 ' + rel(seen[0].t) + '</li>';
-      if (seen.length > 1) {
-        list.innerHTML += seen.slice(1).map(function (s) {
-          return '<li class="gh-extra" style="display:none">' + s.p + ' \xB7 ' + rel(s.t) + '</li>';
-        }).join('');
-        var hd = box.querySelector('.gh-hd');
-        if (hd && !hd.querySelector('.gh-more-btn')) {
-          var btn = document.createElement('button');
-          btn.className = 'k-chip gh-more-btn';
-          btn.type = 'button';
-          btn.textContent = 'Show more';
-          var expanded = false;
-          btn.onclick = function () {
-            expanded = !expanded;
-            [].forEach.call(list.querySelectorAll('.gh-extra'), function (el) {
-              el.style.display = expanded ? '' : 'none';
-            });
-            btn.textContent = expanded ? 'Show less' : 'Show more';
-          };
-          hd.appendChild(btn);
-        }
-      }
+      if (!lines.length) return;
+      list.innerHTML = lines.map(function (l) {
+        return '<li>' + l + '</li>';
+      }).join('');
       box.hidden = false;
     }
 

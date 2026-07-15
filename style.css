@@ -356,6 +356,17 @@ nav .logo {
   gap: 24px;
 }
 
+/* left footer column: stats with the recent-GitHub strip tucked beneath,
+   filling the space next to the (taller) contact block instead of adding
+   height below the sign-off */
+.foot-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 22px;
+  max-width: 60%;
+}
+
 .stats { display: flex; gap: 40px; }
 
 .stats b {
@@ -386,26 +397,14 @@ nav .logo {
   font-size: 13px;
 }
 
-#gh { margin-top: 6vh; border-top: 2px solid var(--ink); padding-top: 18px; }
+#gh { margin-top: 0; border-top: 2px solid var(--ink); padding-top: 12px; align-self: stretch; }
 
-.gh-hd {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-}
-
-.gh-more-btn {
-  font-size: 9px;
-  letter-spacing: 0.18em;
-  padding: 4px 10px;
-}
-
-#gh ul { list-style: none; margin-top: 10px; }
+#gh ul { list-style: none; margin-top: 8px; }
 
 #gh li {
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--soft);
-  padding: 5px 0;
+  padding: 4px 0;
   border-bottom: 1px solid var(--mint);
 }
 
@@ -748,8 +747,11 @@ html.scene #contact {
   z-index: 7;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding: 0 4vw;
+  /* top-anchored, not centered: the sign-off holds a fixed spot below the
+     nav and the footer (stats + GitHub) flows beneath it, so adding recent
+     activity never shifts the headline or crops the top of the panel */
+  justify-content: flex-start;
+  padding: 10vh 4vw 3vh;
   max-width: none;
   margin: 0;
   opacity: 0;
@@ -761,16 +763,8 @@ html.scene #contact {
 
 html.scene #contact.live { pointer-events: auto; }
 
-/* GitHub strip would overflow the height-constrained scene panel — keep it
-   flow-only; the strip stays visible when scene isn't active */
-html.scene #gh {
-  position: absolute;
-  bottom: 4vh;
-  left: 4vw;
-  right: 4vw;
-  margin: 0;
-  padding-top: 12px;
-}
+/* tighten the footer gap in the height-constrained scene panel */
+html.scene #end-inner .row2 { margin-top: 4vh; }
 
 /* ---------- 9. Little Bryan ---------- */
 
@@ -977,4 +971,5 @@ html.scene #guy {
   .card { padding: 22px 20px 20px; }
   .contact-meta { text-align: left; }
   .stats { gap: 24px; flex-wrap: wrap; }
+  .foot-left { max-width: 100%; }
 }
