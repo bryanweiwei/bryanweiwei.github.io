@@ -1446,12 +1446,31 @@
         var p = phrase(ev);
         if (seen.some(function (s) { return s.p === p; })) return false;
         seen.push({ p: p, t: ev.created_at });
-        return seen.length >= 4;
+        return seen.length >= 5;
       });
       if (!seen.length) return;
-      list.innerHTML = seen.map(function (s) {
-        return '<li>' + s.p + ' · ' + rel(s.t) + '</li>';
-      }).join('');
+      list.innerHTML = '<li>' + seen[0].p + ' \xB7 ' + rel(seen[0].t) + '</li>';
+      if (seen.length > 1) {
+        list.innerHTML += seen.slice(1).map(function (s) {
+          return '<li class="gh-extra" style="display:none">' + s.p + ' \xB7 ' + rel(s.t) + '</li>';
+        }).join('');
+        var hd = box.querySelector('.gh-hd');
+        if (hd && !hd.querySelector('.gh-more-btn')) {
+          var btn = document.createElement('button');
+          btn.className = 'k-chip gh-more-btn';
+          btn.type = 'button';
+          btn.textContent = 'Show more';
+          var expanded = false;
+          btn.onclick = function () {
+            expanded = !expanded;
+            [].forEach.call(list.querySelectorAll('.gh-extra'), function (el) {
+              el.style.display = expanded ? '' : 'none';
+            });
+            btn.textContent = expanded ? 'Show less' : 'Show more';
+          };
+          hd.appendChild(btn);
+        }
+      }
       box.hidden = false;
     }
 

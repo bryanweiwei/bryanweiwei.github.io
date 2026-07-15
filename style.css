@@ -388,6 +388,18 @@ nav .logo {
 
 #gh { margin-top: 6vh; border-top: 2px solid var(--ink); padding-top: 18px; }
 
+.gh-hd {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.gh-more-btn {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  padding: 4px 10px;
+}
+
 #gh ul { list-style: none; margin-top: 10px; }
 
 #gh li {
@@ -746,6 +758,10 @@ html.scene #contact {
 }
 
 html.scene #contact.live { pointer-events: auto; }
+
+/* GitHub strip would overflow the height-constrained scene panel — keep it
+   flow-only; the strip stays visible when scene isn't active */
+html.scene #gh { display: none; }
 
 /* ---------- 9. Little Bryan ---------- */
 
