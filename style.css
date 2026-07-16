@@ -592,8 +592,21 @@ html.scene .hero {
 html.scene .hero .hint { display: block; animation: pulse 2.2s ease-in-out infinite; }
 
 /* hero reveal is GSAP-owned in scene mode; CSS just hides the lines
-   until the character stagger takes over (no flash before JS runs) */
-html.scene .hero h1 .rise { transform: translateY(112%); }
+   until the character stagger takes over (no flash before JS runs).
+   Failsafe: if script.js hasn't run within 1.2s (slow bundle / GSAP
+   still downloading), a plain CSS rise reveals the name so the hero is
+   never left blank. buildScene() adds html.gsap-ready the moment it
+   runs, which cancels this — so on normal loads the character stagger
+   stays the only entrance and the failsafe never flashes. */
+html.scene .hero h1 .rise {
+  transform: translateY(112%);
+  animation: heroRiseFail 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) 1.2s forwards;
+}
+html.gsap-ready .hero h1 .rise { animation: none; }
+
+@keyframes heroRiseFail {
+  to { transform: translateY(0); }
+}
 
 /* sub-headline and proof start hidden, then fade in after the name stagger */
 html.scene .hero-sub,

@@ -478,7 +478,24 @@
     GL.nodeBase = 5.5 * w;
   }
 
+  /* Three.js is fetched lazily, off the critical path, and ONLY in scene
+     mode — static / mobile / reduced-motion never download it. Everything
+     else (Lenis, ScrollTrigger, little Bryan, the hero) runs immediately;
+     every GL reference guards on GL.ready until the tube pops in. */
+  function loadGL() {
+    if (window.THREE) { initGL(); return; }
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.149.0/three.min.js';
+    s.async = true;
+    s.onload = function () {
+      /* sync the freshly-built tube to the current scroll position */
+      if (initGL() && master) renderScene();
+    };
+    document.head.appendChild(s);
+  }
+
   function initGL() {
+    if (GL.ready) return true;
     if (!window.THREE) return false;
     var canvas = document.getElementById('gl');
     try {
@@ -914,6 +931,10 @@
   }
 
   function buildScene() {
+    /* GSAP is here and about to own the hero entrance — cancel the CSS
+       failsafe (see style.css) so the character stagger is the only
+       reveal on any normal connection. */
+    html.classList.add('gsap-ready');
     placeCards();
     splitHero();
     splitCopy();
@@ -959,7 +980,7 @@
       return g;
     });
 
-    initGL();
+    loadGL();
 
     /* mouse parallax: specks (GL) + ghost numerals; the tube stays
        registered with the DOM dots, so it never shifts with cursor */
