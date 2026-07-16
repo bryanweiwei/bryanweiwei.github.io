@@ -1147,6 +1147,11 @@
     gsap.set(heroSubWords, { opacity: 0, yPercent: 95 });
     gsap.set([proof, hint], { opacity: 0 });
 
+    /* One continuous cascade: each beat STARTS while the previous is
+       still finishing (absolute positions, not queued end-to-end), so
+       there's no dead time between lines. Individual durations are
+       unchanged — only the waits between them are tightened. The CSS
+       failsafe delays mirror this order/rhythm (see style.css). */
     var tl = gsap.timeline({ delay: 0.15 });
 
     /* 1 — the name: character stagger, row by row, a touch slower per
@@ -1155,31 +1160,31 @@
     heroSplit.forEach(function (chars, row) {
       tl.from(chars, {
         yPercent: 118, duration: 1.0, ease: 'expo.out', stagger: 0.03
-      }, row * 0.18);
+      }, row * 0.1);
     });
 
-    /* 2 — sub-headline rises in word by word, just after the name */
+    /* 2 — sub-headline rises in word by word, over the tail of the name */
     tl.to(heroSubWords,
       { yPercent: 0, opacity: 1, duration: 0.7, ease: 'power3.out', stagger: 0.06 },
-      '>-0.15');
+      0.45);
 
-    /* 3 — proof line fades up */
+    /* 3 — proof line fades up, over the tail of the sub-headline */
     gsap.set(proof, { y: 12 });
     tl.to(proof,
       { y: 0, opacity: 1, duration: 0.55, ease: 'power2.out' },
-      '>-0.05');
+      0.85);
 
-    /* 4 — scroll hint fades in last, then breathes (pulse via .hint-live) */
+    /* 4 — scroll hint fades in, then breathes (pulse via .hint-live) */
     tl.to(hint,
       { opacity: 1, duration: 0.5, ease: 'power1.out',
         onComplete: function () { hint.classList.add('hint-live'); } },
-      '>-0.1');
+      1.05);
 
     /* 5 — finale: the ink line draws down from beneath the copy to the
        bottom edge, inviting the scroll. grow holds at 1 for the descent. */
     tl.to(S, {
       grow: 1, duration: 1.1, ease: 'power2.inOut', onUpdate: renderScene
-    }, '>-0.05');
+    }, 1.2);
   }
 
   function killScene() {

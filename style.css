@@ -618,7 +618,8 @@ html.scene .hero {
    the breathing pulse). Failsafe: with no gsap-ready, it pulses on its
    own so a slow GSAP load still shows it. */
 html.scene .hero .hint { display: block; }
-html.scene:not(.gsap-ready) .hero .hint { animation: pulse 2.2s ease-in-out infinite; }
+/* failsafe: hidden, then appears last (mirrors the cascade, ~name+1.05s) */
+html.scene:not(.gsap-ready) .hero .hint { opacity: 0; animation: pulse 2.2s ease-in-out 2.25s infinite; }
 html.scene.gsap-ready .hero .hint { opacity: 0; }
 html.scene.gsap-ready .hero .hint.hint-live { opacity: 1; animation: pulse 2.2s ease-in-out infinite; }
 
@@ -649,8 +650,10 @@ html.scene:not(.gsap-ready) .hero-sub,
 html.scene:not(.gsap-ready) .hero-proof {
   animation: heroSupportIn 0.5s ease forwards;
 }
-html.scene:not(.gsap-ready) .hero-sub  { animation-delay: 0.7s; }
-html.scene:not(.gsap-ready) .hero-proof { animation-delay: 0.95s; }
+/* delays mirror the tightened GSAP cascade, anchored after the name's
+   1.2s failsafe rise: sub +0.45, proof +0.85 (see heroEntrance). */
+html.scene:not(.gsap-ready) .hero-sub  { animation-delay: 1.65s; }
+html.scene:not(.gsap-ready) .hero-proof { animation-delay: 2.05s; }
 
 /* split units (created by JS in scene mode) */
 .ch, .w { display: inline-block; will-change: transform; }
