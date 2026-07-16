@@ -993,17 +993,11 @@
     };
     addEventListener('mousemove', onSceneMouse, { passive: true });
 
-    /* hero entrance: staggered character rise, line by line (load, not scroll) */
-    gsap.set(hero.querySelectorAll('.rise'), { y: 0 });
-    heroSplit.forEach(function (chars, row) {
-      gsap.from(chars, {
-        yPercent: 118,
-        duration: 0.9,
-        ease: 'expo.out',
-        stagger: 0.022,
-        delay: 0.15 + row * 0.14
-      });
-    });
+    /* hero entrance: sequenced on LOAD (not scroll) — the name stars,
+       then the sub-headline, then the proof, then the hint, and finally
+       the ink line draws down as the invitation to scroll. Built in
+       heroEntrance() and fired at the end of buildScene, once the master
+       timeline exists (the line-draw finale drives renderScene). */
 
     /* snap to the NEAREST composed moment (label), ignoring velocity
        projection — Lenis supplies the inertia; snap only tidies the
@@ -1041,8 +1035,9 @@
 
     master.addLabel('top', 0);
 
-    /* the line draws down while the hero holds, then the hero lifts away */
-    master.to(S, { grow: 1, duration: 8, ease: 'power2.inOut' }, 0);
+    /* the line is now drawn on LOAD (heroEntrance), so it stays full for
+       the whole descent — one continuous stroke that begins in the hero.
+       Scroll only lifts the hero away to reveal the rest of it. */
     master.to(hero, { opacity: 0, y: -90, duration: 5, ease: 'power1.in' }, 4.5);
 
     /* DESCENT — one beat per station: enter (settle), hold, exit */
@@ -1129,6 +1124,62 @@
 
     ScrollTrigger.refresh();
     renderScene();
+    heroEntrance();
+  }
+
+  /* The load entrance, sequenced: name -> sub-headline -> proof -> hint,
+     then the ink line draws down from beneath the copy toward the bottom
+     edge. The line-draw is the finale and doubles as the scroll invite;
+     grow stays at 1 afterward so the scrubbed descent is the same stroke.
+     Mirrors the CSS failsafe (which reveals the same elements if GSAP is
+     slow) — see html.scene.gsap-ready rules in style.css. */
+  var heroSubWords = null;
+  function heroEntrance() {
+    var sub = hero.querySelector('.hero-sub');
+    if (!heroSubWords) heroSubWords = splitUnits(sub, 'w');
+    var proof = hero.querySelector('.hero-proof');
+    var hint = hero.querySelector('.hint');
+
+    /* hold everything hidden up front (overriding the CSS base) so nothing
+       flashes before its beat — the sub container becomes visible while its
+       WORDS carry the reveal. */
+    gsap.set(sub, { opacity: 1 });
+    gsap.set(heroSubWords, { opacity: 0, yPercent: 95 });
+    gsap.set([proof, hint], { opacity: 0 });
+
+    var tl = gsap.timeline({ delay: 0.15 });
+
+    /* 1 — the name: character stagger, row by row, a touch slower per
+       character (0.03) so each letter reads before the next */
+    gsap.set(hero.querySelectorAll('.rise'), { y: 0 });
+    heroSplit.forEach(function (chars, row) {
+      tl.from(chars, {
+        yPercent: 118, duration: 1.0, ease: 'expo.out', stagger: 0.03
+      }, row * 0.18);
+    });
+
+    /* 2 — sub-headline rises in word by word, just after the name */
+    tl.to(heroSubWords,
+      { yPercent: 0, opacity: 1, duration: 0.7, ease: 'power3.out', stagger: 0.06 },
+      '>-0.15');
+
+    /* 3 — proof line fades up */
+    gsap.set(proof, { y: 12 });
+    tl.to(proof,
+      { y: 0, opacity: 1, duration: 0.55, ease: 'power2.out' },
+      '>-0.05');
+
+    /* 4 — scroll hint fades in last, then breathes (pulse via .hint-live) */
+    tl.to(hint,
+      { opacity: 1, duration: 0.5, ease: 'power1.out',
+        onComplete: function () { hint.classList.add('hint-live'); } },
+      '>-0.1');
+
+    /* 5 — finale: the ink line draws down from beneath the copy to the
+       bottom edge, inviting the scroll. grow holds at 1 for the descent. */
+    tl.to(S, {
+      grow: 1, duration: 1.1, ease: 'power2.inOut', onUpdate: renderScene
+    }, '>-0.05');
   }
 
   function killScene() {

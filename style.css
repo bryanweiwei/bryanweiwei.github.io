@@ -417,6 +417,26 @@ nav .logo {
 
 .hero .hint { display: none; }        /* scroll hint is a scene affordance */
 
+/* flow / mobile: a short ink line draws down under the hero copy, a
+   static analog of the scene's line-in-hero — it leads the eye into the
+   timeline spine that begins at #story. Scene mode draws its own line. */
+.hero::after {
+  content: "";
+  display: block;
+  width: 2px;
+  height: 60px;
+  margin: 5vh auto 0;
+  background: var(--ink);
+  transform-origin: top center;
+  animation: heroLineDraw 0.8s ease 0.5s both;
+}
+html.scene .hero::after { display: none; }
+
+@keyframes heroLineDraw {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+
 #story, #work {
   position: relative;
   max-width: 680px;
@@ -586,10 +606,21 @@ html.scene .hero {
   z-index: 5;
   padding-top: 15vh;
   pointer-events: none;
-  background: var(--paper);
+  /* opaque paper behind the copy, fading to transparent in the lower
+     viewport so the ink line reads through it beneath the hint and draws
+     down to the bottom edge (the page background is the same paper, so
+     the fade itself is invisible — only the line shows through) */
+  background: linear-gradient(to bottom,
+    var(--paper) 0%, var(--paper) 70%, transparent 84%);
 }
 
-html.scene .hero .hint { display: block; animation: pulse 2.2s ease-in-out infinite; }
+/* scroll hint: hidden until the entrance fades it in (.hint-live starts
+   the breathing pulse). Failsafe: with no gsap-ready, it pulses on its
+   own so a slow GSAP load still shows it. */
+html.scene .hero .hint { display: block; }
+html.scene:not(.gsap-ready) .hero .hint { animation: pulse 2.2s ease-in-out infinite; }
+html.scene.gsap-ready .hero .hint { opacity: 0; }
+html.scene.gsap-ready .hero .hint.hint-live { opacity: 1; animation: pulse 2.2s ease-in-out infinite; }
 
 /* hero reveal is GSAP-owned in scene mode; CSS just hides the lines
    until the character stagger takes over (no flash before JS runs).
@@ -608,14 +639,18 @@ html.gsap-ready .hero h1 .rise { animation: none; }
   to { transform: translateY(0); }
 }
 
-/* sub-headline and proof start hidden, then fade in after the name stagger */
+/* sub-headline and proof start hidden. GSAP owns their entrance (word
+   stagger / fade) on normal loads; the CSS fade below is the failsafe,
+   applied only when gsap-ready is absent (slow / failed GSAP) so the
+   same elements still reveal. */
 html.scene .hero-sub,
-html.scene .hero-proof {
-  opacity: 0;
+html.scene .hero-proof { opacity: 0; }
+html.scene:not(.gsap-ready) .hero-sub,
+html.scene:not(.gsap-ready) .hero-proof {
   animation: heroSupportIn 0.5s ease forwards;
 }
-html.scene .hero-sub  { animation-delay: 0.7s; }
-html.scene .hero-proof { animation-delay: 0.95s; }
+html.scene:not(.gsap-ready) .hero-sub  { animation-delay: 0.7s; }
+html.scene:not(.gsap-ready) .hero-proof { animation-delay: 0.95s; }
 
 /* split units (created by JS in scene mode) */
 .ch, .w { display: inline-block; will-change: transform; }
