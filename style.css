@@ -457,6 +457,34 @@ html.scene .hero::after { display: none; }
 
 #story { padding-bottom: 2vh; }
 
+/* captioned photo vignette: ink plate + paper mat + hard offset shadow,
+   caption in small caps beneath. Flow/mobile: an inline figure. The
+   pattern is reusable (stations etc.) — see PRD-side-images.md. */
+.vignette {
+  margin: 5vh auto;
+  max-width: 400px;
+  padding: 0 4vw;
+}
+
+.vignette img {
+  display: block;
+  width: 100%;
+  height: auto;
+  padding: 4px;                         /* the mat */
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 6px 6px 0 rgba(14, 22, 17, 0.10);
+}
+
+.vignette figcaption {
+  margin-top: 9px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--soft);
+}
+
 .station {
   position: relative;
   padding: 5vh 0;
@@ -776,6 +804,32 @@ html.scene #tl .tl-title {
   font-style: italic;
   font-weight: 480;
   font-size: clamp(26px, 3.6vw, 44px);
+}
+
+/* the left-column photo vignette (scene): pinned below the #tl heading,
+   above the horizontal ink line. Geometry is COLLISION-VERIFIED — the
+   revolve's departed cards arc through the lower-left and, at wide
+   viewports, their corners graze x<180 in this band, so the plate slides
+   right as vw grows (it tucks inside the L, clear of the vertical line).
+   Verified 0 intersections at 1280x800/1280x720/1520x735/1536x791 with
+   >=12px margin (sweep t=44..86, joint with the ringIn fade in
+   renderScene). Re-run the sweep if RADIUS/SPACING/ringX or this block
+   changes. */
+html.scene #work-photo {
+  position: fixed;
+  z-index: 2;                            /* over the GL line, under cards */
+  left: clamp(4vw, calc(4vw + (100vw - 1300px) * 0.6), calc(4vw + 130px));
+  top: calc(10vh + 104px);
+  margin: 0;
+  padding: 0;
+  max-width: none;
+  opacity: 0;                            /* renderScene drives it (ringIn) */
+  pointer-events: none;
+}
+
+html.scene #work-photo img {
+  width: auto;
+  height: min(18.5vh, 160px);
 }
 
 html.scene #year {

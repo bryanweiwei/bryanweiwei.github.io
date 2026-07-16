@@ -29,7 +29,8 @@
   var vline = $('#vline'), hline = $('#hline'), node = $('#node'),
       hero = $('.hero'), tl = $('#tl'), yearEl = $('#year'),
       end = $('#contact'), prog = $('#progress'), guy = $('#guy'),
-      ring = $('#ring'), waveAnchor = $('#wave-anchor');
+      ring = $('#ring'), waveAnchor = $('#wave-anchor'),
+      workPhoto = $('#work-photo');
   var stations = [].slice.call(document.querySelectorAll('.station'));
   var cards = [].slice.call(document.querySelectorAll('#ring .card'));
 
@@ -690,6 +691,14 @@
     yearEl.textContent = YEARS[front];
     yearEl.style.opacity = S.ringIn > 0.25 ? 0.9 : 0;
 
+    /* left-column photo vignette rides the ring window; the steeper fade
+       ((ringIn - .5) * 2) keeps it invisible whenever exiting cards are
+       anywhere near its zone (collision-swept at 1280/1520, see NOTES) */
+    if (workPhoto) {
+      workPhoto.style.opacity =
+        Math.max(0, Math.min(1, (S.ringIn - 0.5) * 2)).toFixed(3);
+    }
+
     /* soft shadow the front card casts on the paper behind it */
     var bestFace = (function () {
       var a = ((front * STEP - u * STEP) % 360 + 360) % 360;
@@ -1227,9 +1236,9 @@
       }
     }
     if (sayHiLink) { sayHiLink.style.clipPath = ''; if (CHAR.ready) CHAR.lastClip = -1; }
-    [vline, hline, node, ring, yearEl, guy].concat(cards).forEach(function (el) {
-      el.removeAttribute('style');
-    });
+    [vline, hline, node, ring, yearEl, guy]
+      .concat(cards, workPhoto ? [workPhoto] : [])
+      .forEach(function (el) { el.removeAttribute('style'); });
     guy.classList.remove('p-stand', 'p-run', 'p-leap', 'waving');
     lastPose = '';
     end.classList.remove('live');
