@@ -691,12 +691,14 @@
     yearEl.textContent = YEARS[front];
     yearEl.style.opacity = S.ringIn > 0.25 ? 0.9 : 0;
 
-    /* left-column photo vignette rides the ring window; the steeper fade
-       ((ringIn - .5) * 2) keeps it invisible whenever exiting cards are
-       anywhere near its zone (collision-swept at 1280/1520, see NOTES) */
+    /* card 01's left-column plate: in with the ring (steep ringIn fade),
+       OUT as the revolve leaves card 01 — gone by u=0.4, well before the
+       departing card's arc reaches its zone (collision-swept, see the
+       html.scene #work-photo block in style.css). Scrub-symmetric. */
     if (workPhoto) {
-      workPhoto.style.opacity =
-        Math.max(0, Math.min(1, (S.ringIn - 0.5) * 2)).toFixed(3);
+      var wIn = Math.max(0, Math.min(1, (S.ringIn - 0.5) * 2));
+      var wOut = Math.max(0, Math.min(1, 1 - (S.u - 0.02) / 0.28));
+      workPhoto.style.opacity = (wIn * wOut).toFixed(3);
     }
 
     /* the "Also" ledger dwell: S.alsoIn (tweened on the master timeline,

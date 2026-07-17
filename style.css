@@ -301,7 +301,6 @@ nav .logo {
 .card .card-link a:hover { color: var(--pop-deep); }
 
 .card .for {
-  clear: both;                          /* below any floated .card-side */
   margin-top: 16px;
   padding-top: 12px;
   border-top: 2px solid var(--ink);
@@ -312,33 +311,6 @@ nav .logo {
   color: var(--accent);
 }
 
-/* WORK register side photo for card 01: a proper formal ink plate. The
-   figure lives INSIDE the card DOM so the scene's 3D transform carries it,
-   but scene CSS (section 8) hangs it OUTSIDE the card's right edge as a
-   companion plate. Flow/mobile: a bold plate between headline and copy. */
-.card-side {
-  width: min(58%, 240px);
-  margin: 14px 0 6px;
-}
-
-.card-side img {
-  display: block;
-  width: 100%;
-  height: auto;
-  padding: 4px;                         /* the mat */
-  background: var(--paper);
-  border: 2px solid var(--ink);
-  box-shadow: 6px 6px 0 rgba(14, 22, 17, 0.10);
-}
-
-.card-side figcaption {
-  margin-top: 6px;
-  font-size: 9.5px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--soft);
-}
 
 /* headshot in the sign-off column */
 .byline-photo {
@@ -1019,35 +991,6 @@ html.scene #ring .card {
   transform-origin: 50% 152px;
 }
 
-/* card 01's companion plate (scene): a big formal plate hung on the card's
-   right edge — overlapping it by 120px (CSS px on the card plane) and
-   extending OUTWARD by a viewport-adaptive amount. The front card projects
-   at ~1.354x (perspective 1300, RADIUS 340), so free screen space right of
-   the card is only ~(0.256vw - 296px); the clamp keeps the plate's
-   projected right edge >=12px inside the viewport from 1280 up, while the
-   overlap keeps it bold everywhere. Rides the card's 3D transform, so it
-   revolves/fades/exits with card 01. Swept vs #tl: 0 intersections. */
-html.scene #ring .card .card-side {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  right: calc(-1 * clamp(21px, 18.93vw - 218.9px, 110px));
-  width: calc(clamp(21px, 18.93vw - 218.9px, 110px) + 90px);
-  margin: 0;
-  backface-visibility: hidden;
-}
-
-/* keep card 01's copy clear of the overlapping plate; the tighter dense
-   body type keeps the taller wrap inside the short-viewport budget */
-html.scene #ring .card:first-child > p:not(.no):not(.tag) {
-  padding-right: 100px;
-}
-
-html.scene #ring .card:first-child > p:not(.no):not(.tag):not(.for):not(.card-link) {
-  font-size: 12.5px;
-  line-height: 1.5;
-}
-
 /* the VOINOSIS card carries twice the copy: wider box, tighter type,
    so it fits the viewport instead of running off the bottom */
 html.scene #ring .card--dense {
@@ -1090,39 +1033,34 @@ html.scene #tl .tl-title {
   font-size: clamp(26px, 3.6vw, 44px);
 }
 
-/* the left-column photo vignette (scene) — currently DORMANT: the anchor
-   photo was removed at checkpoint 2b (left column back to whitespace) but
-   the collision-verified geometry is kept for a future photo; re-add
-   figure#work-photo in index.html to revive. Pinned below the #tl heading,
-   above the horizontal ink line. Geometry is COLLISION-VERIFIED — the
-   revolve's departed cards arc through the lower-left and, at wide
-   viewports, their corners graze x<180 in this band, so the plate slides
-   right as vw grows (it tucks inside the L, clear of the vertical line).
-   Verified 0 intersections at 1280x800/1280x720/1520x735/1536x791 with
-   >=12px margin (sweep t=44..86, joint with the ringIn fade in
-   renderScene). Re-run the sweep if RADIUS/SPACING/ringX or this block
+/* card 01's plate (scene): BIG formal portrait in the work section's left
+   column, across the line from the cards — the zone the old anchor sat in,
+   now used at full size. Safe because visibility is TIED TO CARD 01
+   (renderScene: ringIn fade in x fade out as u leaves 0): while card 01 is
+   front, NO card has departed yet, so the lower-left is empty — the first
+   departure is card 01 itself, and the plate is gone before its arc
+   reaches this zone. During its window the left column holds only the #tl
+   heading (top; the plate hangs below it) — the horizontal ink line runs
+   RIGHTWARD from the center elbow, so nothing crosses back here.
+   COLLISION-SWEPT t=44..58 jointly with the opacity envelope at 1536x791 /
+   1536x735 / 1280x720: 0 visible intersections with cards, #tl, or #guy.
+   Re-run the sweep if RADIUS/SPACING/ringX, the envelope, or this block
    changes. */
 html.scene #work-photo {
   position: fixed;
   z-index: 2;                            /* over the GL line, under cards */
-  left: clamp(4vw, calc(4vw + (100vw - 1300px) * 0.6), calc(4vw + 130px));
-  top: calc(10vh + 104px);
+  left: 6vw;
+  top: calc(10vh + 110px);
   margin: 0;
   padding: 0;
   max-width: none;
-  opacity: 0;                            /* renderScene drives it (ringIn) */
+  opacity: 0;                            /* renderScene drives it (u/ringIn) */
   pointer-events: none;
-}
-
-html.scene #work-photo {
-  /* cap the figure to the portrait's width so the long caption WRAPS
-     instead of stretching the plate into the collision-checked zone */
-  width: 132px;
 }
 
 html.scene #work-photo img {
   width: auto;
-  height: min(18.5vh, 160px);
+  height: min(calc(78vh - 150px), 470px);
 }
 
 /* ---- the "Also" ledger DWELL (scene) ----
@@ -1505,8 +1443,6 @@ html.scene #guy {
   /* station photo cluster: full column width, desk snapshots still overlap */
   .st-photos { max-width: none; margin-bottom: 84px; }
 
-  /* card 01 plate: bold inline plate between headline and copy */
-  .card-side { width: min(72%, 250px); }
 
   /* ledger rows stack: number + title, description, then the photo inline
      (lazy-loaded via loading="lazy" + srcset on each <img>). nth-child(n)

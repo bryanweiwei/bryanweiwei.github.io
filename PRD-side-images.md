@@ -58,13 +58,16 @@ on the page. Row 06 uses 216 (privacy-cropped to Bryan alone on stage).
    kept.
 
 ### Checkpoint 2c changes (Bryan, Jul 17)
-1. **Card 01 plate out of the card body**: a big formal plate hung on the
-   card's RIGHT edge (overlapping it 90px on the card plane, extending
-   outward by a viewport-adaptive clamp so its projected edge stays >=12px
-   inside the viewport from 1280 up). Rides the card's 3D transform; card
-   01's copy is inset + set in dense type to hold the height budget.
-   Swept vs #tl across the ring window: 0 intersections. Flow/mobile: bold
-   inline plate between headline and copy.
+1. **Card 01 plate out of the card body — in the LEFT column** (corrected
+   from an earlier right-of-card attempt): a big formal portrait plate in
+   the work section's left whitespace, across the line from the cards (the
+   old anchor zone, revived at full size — img height min(78vh - 150px,
+   470px)). Visibility TIED TO CARD 01: ringIn fade in, fully out by
+   u=0.30 — while 01 is front no card has departed yet, so the whole left
+   column is free, and the plate is gone before 01's own exit arc reaches
+   it. Joint opacity+rect sweep t=44..58 at 1536x791 and 1280x720 vs
+   cards/#tl/#guy: 0 visible intersections. Flow/mobile: inline vignette
+   directly above the cards.
 2. **Ledger = literal TIMELINE (scene)**: the parked ink line runs through
    the section, entries alternate 06 above / 07 below / 08 above / 09 below
    on stem+node dots, heading tops the section, little Bryan idles standing

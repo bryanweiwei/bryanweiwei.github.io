@@ -129,11 +129,22 @@
   </div>
 </section>
 
-<!-- The work-section left column is deliberately clean whitespace (Bryan,
-     checkpoint 2b: anchor photo removed; the case comp lives in ledger row
-     06). The #work-photo vignette pattern, its collision-verified scene CSS,
-     and the ringIn fade in script.js are all kept DORMANT — drop a
-     <figure class="vignette" id="work-photo"> back here to revive them. -->
+<!-- Card 01's photo, WORK register: a big formal plate in the work
+     section's LEFT column (the zone across the line from the cards). It is
+     the one honest per-card pairing — the photo IS Salesforce-related
+     (PRD-side-images.md). Scene mode ties its visibility to card 01 being
+     front (ringIn fade in, fades out as the revolve leaves 01 — before the
+     departing card sweeps its zone); flow/mobile shows it inline here,
+     directly above the cards. -->
+<figure class="vignette" id="work-photo">
+  <img src="images/photo-salesforce.jpg"
+       srcset="images/photo-salesforce.jpg 320w, images/photo-salesforce-2x.jpg 640w"
+       sizes="(max-width: 759px) 86vw, 370px"
+       width="320" height="409"
+       alt="Bryan in a suit beside the Einstein and Trailblazer mascots at the Salesforce office"
+       loading="lazy" decoding="async">
+  <figcaption>Salesforce office</figcaption>
+</figure>
 
 <section id="work" aria-labelledby="work-title">
   <h2 id="work-title" class="sr-only">The work, in order</h2>
@@ -145,17 +156,6 @@
       <p class="no" aria-hidden="true">01</p>
       <p class="tag">Case Competition · Salesforce</p>
       <h3>AI <em>Middleware</em></h3>
-      <!-- The one honest per-card photo: it is actually Salesforce-related
-           (PRD-side-images.md allows exactly this pairing). WORK register. -->
-      <figure class="card-side">
-        <img src="images/photo-salesforce.jpg"
-             srcset="images/photo-salesforce.jpg 320w, images/photo-salesforce-2x.jpg 640w"
-             sizes="108px"
-             width="320" height="409"
-             alt="Bryan in a suit beside the Einstein and Trailblazer mascots at the Salesforce office"
-             loading="lazy" decoding="async">
-        <figcaption>Salesforce office</figcaption>
-      </figure>
       <p>Built and presented an AI middleware concept as part of a Salesforce case competition focused on the real value firms can deliver clients in the age of AI. The prototype explored how to bridge enterprise data and AI workflows in ways that feel native rather than bolted-on.</p>
       <p class="card-link"><a href="https://lovable.dev/projects/fb15d405-ea90-4eda-8a91-824d44908fc8" target="_blank" rel="noopener">View prototype ↗</a></p>
       <p class="for">Shipped for: a judging panel that pushed back</p>
