@@ -676,23 +676,23 @@ html.scene .hero::after { display: none; }
   font-family: var(--serif);
   font-style: italic;
   font-weight: 600;
-  font-size: 18px;
+  font-size: 22px;
   color: var(--pop-deep);
   line-height: 1.2;
 }
 
 .also-txt h3 {
   font-family: var(--serif);
-  font-weight: 560;
-  font-size: clamp(17px, 2vw, 21px);
-  line-height: 1.15;
+  font-weight: 600;
+  font-size: clamp(22px, 3vw, 30px);
+  line-height: 1.08;
   letter-spacing: -0.01em;
 }
 
 .also-txt p {
-  margin-top: 6px;
-  font-size: 13px;
-  line-height: 1.5;
+  margin-top: 8px;
+  font-size: 13.5px;
+  line-height: 1.6;
   color: var(--soft);
   max-width: 42ch;
 }
@@ -1088,45 +1088,46 @@ html.scene #also {
 html.scene #also::before,
 html.scene #also .also-eyebrow { display: none; }
 
-/* the heading tops the section like a chapter title */
+/* the heading holds the top-RIGHT corner (the top band belongs to the
+   above-line plates now) */
 html.scene #also .also-head {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 72px;
-  text-align: center;
-  font-size: clamp(22px, 2.2vw, 30px);
+  right: 4vw;
+  top: 74px;
+  text-align: right;
+  font-size: clamp(24px, 2.3vw, 32px);
   margin: 0;
 }
 
 html.scene #also .also-list { margin: 0; }
 
-/* A LITERAL TIMELINE: the parked ink line (~49.7vh) runs through the
-   section; the four entries alternate sides — 06 above, 07 below, 08
-   above, 09 below — each attached to the line by a node dot + stem.
-   Little Bryan idles standing on the line at ~34vw, in the gap between
-   the two above-line entries. Photos are natural-aspect portraits
-   (no letterbox crops), height-capped to the half-stage budget. */
+/* A LITERAL TIMELINE, at full typographic scale: the parked ink line
+   (~49.7vh) runs through the section; the four entries alternate sides —
+   06 above, 07 below, 08 above, 09 below — each attached to the line by
+   a node dot + stem, staggered so the dots pace evenly. Little Bryan
+   idles standing on the line at ~34vw, in the gap between the two
+   above-line entries. Photos are natural-aspect portraits sized to fill
+   their half-stage (height-capped against the nav above / viewport
+   bottom below); titles carry Fraunces at near-card scale. */
 html.scene #also .also-row {
   position: absolute;
-  width: 23vw;
   display: grid;
   grid-template-columns: auto 1fr;
   grid-template-rows: auto auto 1fr;
-  gap: 2px 14px;
+  gap: 4px 20px;
   padding: 0;
   border-top: none;
 }
 
-/* slots: anchors evenly spaced along the line */
-html.scene #also .also-row:nth-child(1) { left: 6vw; }
-html.scene #also .also-row:nth-child(2) { left: 29vw; }
-html.scene #also .also-row:nth-child(3) { left: 52vw; }
-html.scene #also .also-row:nth-child(4) { left: 74vw; }
+/* staggered slots: wide entries, dots at ~16.5 / 39 / 59 / 83vw */
+html.scene #also .also-row:nth-child(1) { left: 3vw; width: 27vw; }
+html.scene #also .also-row:nth-child(2) { left: 21vw; width: 36vw; }
+html.scene #also .also-row:nth-child(3) { left: 43vw; width: 32vw; }
+html.scene #also .also-row:nth-child(4) { left: 70vw; width: 26vw; }
 
 /* above the line: pinned up from it; below: pinned down from it */
-html.scene #also .also-row:nth-child(odd) { bottom: calc(50.3vh + 44px); }
-html.scene #also .also-row:nth-child(even) { top: calc(49.7vh + 44px); }
+html.scene #also .also-row:nth-child(odd) { bottom: calc(50.3vh + 36px); }
+html.scene #also .also-row:nth-child(even) { top: calc(49.7vh + 36px); }
 
 /* the node dot, centered ON the line, and the stem attaching the entry
    (the flow spine-dot styling on ::before is fully overridden here) */
@@ -1135,7 +1136,7 @@ html.scene #also .also-row::before {
   position: absolute;
   left: calc(50% - 1px);
   width: 2px;
-  height: 40px;
+  height: 36px;
   background: var(--ink);
   border: none;
   border-radius: 0;
@@ -1143,19 +1144,19 @@ html.scene #also .also-row::before {
 html.scene #also .also-row::after {
   content: "";
   position: absolute;
-  left: calc(50% - 7px);
-  width: 10px;
-  height: 10px;
+  left: calc(50% - 8px);
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: var(--pop);
   border: 2px solid var(--ink);
 }
-html.scene #also .also-row:nth-child(odd)::before { top: auto; bottom: -42px; }
-html.scene #also .also-row:nth-child(odd)::after { top: auto; bottom: -51px; }
-html.scene #also .also-row:nth-child(even)::before { top: -42px; bottom: auto; }
-html.scene #also .also-row:nth-child(even)::after { top: -51px; bottom: auto; }
+html.scene #also .also-row:nth-child(odd)::before { top: auto; bottom: -36px; }
+html.scene #also .also-row:nth-child(odd)::after { top: auto; bottom: -44px; }
+html.scene #also .also-row:nth-child(even)::before { top: -36px; bottom: auto; }
+html.scene #also .also-row:nth-child(even)::after { top: -44px; bottom: auto; }
 
-/* entry innards: portrait plate left, number/title/copy right */
+/* entry innards: big portrait plate left, number/title/copy right */
 html.scene #also .also-fig {
   grid-column: 1;
   grid-row: 1 / -1;
@@ -1165,19 +1166,27 @@ html.scene #also .also-fig {
 html.scene #also .also-fig img {
   width: auto;
   height: auto;
-  max-height: min(23vh, 210px);
-  max-width: 11.5vw;
+  max-width: 15vw;
+}
+/* above-line plates stop short of the nav; below-line plates of the
+   viewport bottom (the below pair runs a touch larger — the alternation
+   reads dynamic, not uneven) */
+html.scene #also .also-row:nth-child(odd) .also-fig img {
+  max-height: min(calc(49.7vh - 128px), 300px);
+}
+html.scene #also .also-row:nth-child(even) .also-fig img {
+  max-height: min(calc(50.3vh - 124px), 320px);
 }
 html.scene #also .also-fig figcaption {
-  margin-top: 6px;
-  max-width: 11.5vw;
+  margin-top: 7px;
+  max-width: 15vw;
 }
 /* all entries read left-aligned in the timeline (the flow layout's
    mirrored right-alignment does not apply here) */
 html.scene #also .also-row:nth-child(n) .also-no {
   grid-column: 2;
   grid-row: 1;
-  font-size: 15px;
+  font-size: clamp(17px, 1.5vw, 22px);
   text-align: left;
 }
 html.scene #also .also-row:nth-child(n) .also-txt {
@@ -1186,12 +1195,15 @@ html.scene #also .also-row:nth-child(n) .also-txt {
   text-align: left;
 }
 html.scene #also .also-row:nth-child(n) .also-txt p { margin-left: 0; }
-html.scene #also .also-txt h3 { font-size: clamp(15px, 1.25vw, 19px); }
+html.scene #also .also-txt h3 {
+  font-size: clamp(19px, 1.8vw, 26px);
+  line-height: 1.08;
+}
 html.scene #also .also-txt p {
-  font-size: 11.5px;
-  line-height: 1.45;
-  margin-top: 4px;
-  max-width: none;
+  font-size: 12.5px;
+  line-height: 1.55;
+  margin-top: 7px;
+  max-width: 34ch;
 }
 
 html.scene #year {
