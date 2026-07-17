@@ -301,6 +301,7 @@ nav .logo {
 .card .card-link a:hover { color: var(--pop-deep); }
 
 .card .for {
+  clear: both;                          /* below any floated .card-side */
   margin-top: 16px;
   padding-top: 12px;
   border-top: 2px solid var(--ink);
@@ -309,6 +310,35 @@ nav .logo {
   text-transform: uppercase;
   font-weight: 600;
   color: var(--accent);
+}
+
+/* WORK register side photo inside a card (currently card 01 only): a small
+   formal ink plate floated beside the body copy, caption in small caps.
+   Rides the card's own 3D transform in scene mode, so it inherits the
+   collision-checked card envelope — no new geometry. */
+.card-side {
+  float: right;
+  width: 106px;
+  margin: 4px 0 10px 14px;
+}
+
+.card-side img {
+  display: block;
+  width: 100%;
+  height: auto;
+  padding: 3px;                         /* the mat */
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 rgba(14, 22, 17, 0.10);
+}
+
+.card-side figcaption {
+  margin-top: 5px;
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--soft);
 }
 
 /* headshot in the sign-off column */
@@ -485,6 +515,64 @@ html.scene .hero::after { display: none; }
   color: var(--soft);
 }
 
+/* ---- STORY register: casual chapter photos at the stations ----
+   Paper borders (white print mat, soft shadow — deliberately NOT the ink
+   frame), slight tilts, overlapping. Any .station can carry a .st-photos
+   cluster: one .st-plate (captioned) + up to two .st-desk snapshots.
+   Stations without photos need no changes. See PRD-side-images.md. */
+.st-photos {
+  position: relative;
+  margin: 20px 0 74px;                  /* bottom reserves the desk overhang */
+  max-width: 400px;
+}
+
+.st-photos figure { margin: 0; }
+
+.st-photos img {
+  display: block;
+  width: 100%;
+  height: auto;
+  padding: 5px;                         /* the paper print border */
+  background: #fff;
+  border: 1px solid rgba(14, 22, 17, 0.16);
+  box-shadow: 0 3px 14px rgba(14, 22, 17, 0.16);
+}
+
+.st-plate {
+  position: relative;
+  z-index: 1;
+  transform: rotate(-1.4deg);
+}
+
+.st-plate figcaption {
+  margin-top: 8px;
+  max-width: 55%;                       /* clear of the desk-photo overlap */
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  line-height: 1.6;
+  text-transform: uppercase;
+  color: var(--soft);
+}
+
+.st-desk { position: absolute; }
+
+.st-desk-a {
+  width: 31%;
+  right: -5%;
+  bottom: -58px;
+  transform: rotate(4.5deg);
+  z-index: 3;
+}
+
+.st-desk-b {
+  width: 33%;
+  right: 18%;
+  bottom: -66px;
+  transform: rotate(-5.5deg);
+  z-index: 2;
+}
+
 .station {
   position: relative;
   padding: 5vh 0;
@@ -515,6 +603,131 @@ html.scene .hero::after { display: none; }
   border-radius: 50%;
   background: var(--pop);
   border: 2px solid var(--ink);
+}
+
+/* the "Also" ledger (flow/mobile). Continues the timeline spine below the
+   cards; numbered hairline rows, not cards, with a small WORK-register
+   photo plate per row. Scene-mode overrides live in section 8. */
+#also {
+  position: relative;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 2vh 4vw 8vh calc(4vw + 44px);
+}
+
+#also::before {
+  content: "";
+  position: absolute;
+  left: calc(4vw + 12px);
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--ink);
+}
+
+.also-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--soft);
+}
+
+.also-head {
+  font-family: var(--serif);
+  font-weight: 640;
+  font-size: clamp(30px, 4vw, 44px);
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  margin-top: 6px;
+}
+
+.also-head em {
+  font-style: italic;
+  font-weight: 420;
+  text-transform: none;
+  color: var(--accent);
+}
+
+.also-list {
+  list-style: none;
+  margin-top: 3vh;
+}
+
+.also-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 18px;
+  align-items: start;
+  padding: 22px 0;
+  border-top: 1px solid rgba(14, 22, 17, 0.14);
+}
+
+.also-row:first-child { border-top: none; }
+
+/* dot on the spine, matching the card beats above */
+.also-row::before {
+  content: "";
+  position: absolute;
+  left: -38px;
+  top: 28px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--pop);
+  border: 2px solid var(--ink);
+}
+
+.also-no {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--pop-deep);
+  line-height: 1.2;
+}
+
+.also-txt h3 {
+  font-family: var(--serif);
+  font-weight: 560;
+  font-size: clamp(17px, 2vw, 21px);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.also-txt p {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--soft);
+  max-width: 42ch;
+}
+
+.also-fig {
+  margin: 0;
+  width: 128px;
+}
+
+.also-fig img {
+  display: block;
+  width: 100%;
+  height: auto;                         /* natural aspect: the privacy crops
+                                           are portraits; keep faces framed */
+  padding: 3px;                         /* the mat */
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 5px 5px 0 rgba(14, 22, 17, 0.10);
+}
+
+.also-fig figcaption {
+  margin-top: 7px;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--soft);
 }
 
 #tl, #year, #scene, #runway, .grain, #ring-shadow { display: none; }
@@ -723,6 +936,26 @@ html.scene .station .txt {
 html.scene .station.left .txt { right: calc(50% + 44px); text-align: right; }
 html.scene .station.right .txt { left: calc(50% + 44px); }
 
+/* station chapter photos ride the station across the OTHER side of the
+   line from the text (the station element carries the scroll animation,
+   so the cluster fades/moves with it for free). 60px off the center line
+   keeps the cluster clear of the ink line and little Bryan's descent. */
+html.scene .st-photos {
+  position: absolute;
+  top: 0;
+  transform: translateY(-50%);
+  width: min(28vw, 320px);
+  margin: 0;
+}
+
+html.scene .station.right .st-photos { right: calc(50% + 60px); }
+html.scene .station.left .st-photos { left: calc(50% + 60px); }
+
+/* the desk snapshots tuck tighter against the plate in the fixed scene
+   (the flow offsets assume room below; here the cluster is centered) */
+html.scene .st-desk-a { bottom: -46px; right: -4%; }
+html.scene .st-desk-b { bottom: -54px; right: 20%; }
+
 /* the 3D ring */
 html.scene #work {
   position: fixed;
@@ -762,6 +995,14 @@ html.scene #ring .card {
      exact pivot, so little Bryan stays glued to the top edge no matter how
      tall a card's content (image) makes it. */
   transform-origin: 50% 152px;
+}
+
+/* card 01's side plate: compact in the height-budgeted scene box (the
+   flow/mobile size lives on .card-side; the wrap column must not push the
+   card past the viewport on short screens) */
+html.scene #ring .card .card-side {
+  width: 82px;
+  margin: 2px 0 8px 12px;
 }
 
 /* the VOINOSIS card carries twice the copy: wider box, tighter type,
@@ -827,10 +1068,83 @@ html.scene #work-photo {
   pointer-events: none;
 }
 
+html.scene #work-photo {
+  /* cap the figure to the portrait's width so the long caption WRAPS
+     instead of stretching the plate into the collision-checked zone */
+  width: 132px;
+}
+
 html.scene #work-photo img {
   width: auto;
   height: min(18.5vh, 160px);
 }
+
+/* the "Also" ledger rides the early dolly as a full-width filmstrip across
+   the TOP band (renderScene fades + drifts it off S.travel): the camera
+   passes the "other work" after the cards dissolve, before the sign-off
+   pulls in from the right. Anchored high so it clears little Bryan and the
+   GL line, which both sit mid-screen during the dolly (verified: strip
+   bottom ~300px vs mascot band starting ~340px at 791vh / ~310px at 720vh).
+   No timeline label depends on it — mascot run and finale untouched. */
+html.scene #also {
+  position: fixed;
+  z-index: 5;                           /* over the line, under the finale */
+  left: 0;
+  top: 8.5vh;                           /* clears the fixed nav bar */
+  width: 100vw;
+  max-width: none;
+  margin: 0;
+  padding: 0 4vw;
+  opacity: 0;                           /* renderScene drives it (travel) */
+  pointer-events: none;
+}
+
+html.scene #also::before,
+html.scene #also .also-row::before,
+html.scene #also .also-eyebrow { display: none; }
+
+html.scene #also .also-head {
+  text-align: center;
+  font-size: 26px;
+  margin: 0 0 1.6vh;
+}
+
+html.scene #also .also-list {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-top: 0;
+}
+
+/* strip rows: text column + a natural-aspect portrait plate beside it
+   (cover-cropping the tall privacy crops into landscape loses the faces) */
+html.scene #also .also-row {
+  display: grid;
+  grid-template-columns: 1fr 96px;
+  grid-template-rows: auto 1fr;         /* number row stays tight; the photo
+                                           span stretches the text row only */
+  gap: 2px 14px;
+  padding: 0;
+  border-top: none;
+}
+html.scene #also .also-txt { align-self: start; }
+html.scene #also .also-no { grid-column: 1; font-size: 15px; }
+html.scene #also .also-txt { grid-column: 1; }
+html.scene #also .also-txt h3 { font-size: 15px; margin-top: 2px; }
+html.scene #also .also-txt p {
+  font-size: 11px;
+  line-height: 1.45;
+  margin-top: 3px;
+  max-width: none;
+}
+html.scene #also .also-fig {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  width: 96px;
+  margin-top: 0;
+}
+html.scene #also .also-fig img { width: 100%; height: auto; object-fit: fill; }
+html.scene #also .also-fig figcaption { margin-top: 6px; }
 
 html.scene #year {
   display: block;
@@ -1069,12 +1383,33 @@ html.scene #guy {
 /* ---------- 12. Flow-mode small screens ---------- */
 
 @media (max-width: 759px) {
-  #story, #work { padding-left: calc(4vw + 34px); }
-  #story::before, #work::before { left: calc(4vw + 8px); }
+  #story, #work, #also { padding-left: calc(4vw + 34px); }
+  #story::before, #work::before, #also::before { left: calc(4vw + 8px); }
   .station .dot { left: -31px; }
   #ring .card::before { left: -33px; }
   .card { padding: 22px 20px 20px; }
   .contact-meta { text-align: left; }
   .stats { gap: 24px; flex-wrap: wrap; }
   .foot-left { max-width: 100%; }
+
+  /* station photo cluster: full column width, desk snapshots still overlap */
+  .st-photos { max-width: none; margin-bottom: 84px; }
+
+  /* card 01 side plate: slightly smaller so the wrap column stays readable */
+  .card-side { width: 92px; margin-left: 12px; }
+
+  /* ledger rows stack: number + title, description, then the photo inline
+     (lazy-loaded via loading="lazy" + srcset on each <img>) */
+  .also-row {
+    grid-template-columns: auto 1fr;
+    gap: 4px 14px;
+  }
+  .also-row::before { left: -33px; }
+  .also-txt { grid-column: 2; }
+  .also-no { grid-row: 1; }
+  .also-fig {
+    grid-column: 1 / -1;
+    width: min(240px, 70vw);
+    margin-top: 14px;
+  }
 }

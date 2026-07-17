@@ -1,4 +1,47 @@
-# PRD — Side-column photos + "Also" ledger — v3
+# PRD — Side-column photos + "Also" ledger — v4
+
+## v4 updates (Bryan, Jul 17 — overrides v3/v2 where they conflict)
+
+### Two photo registers
+- **STORY photos** (stations, future city shots) = **casual register**: tilted,
+  paper borders, can overlap each other.
+- **WORK photos** (work-section anchor, card 01, ledger rows) = **formal
+  register**: straight ink-frame plates, small-caps captions.
+
+### PRIVACY RULE (hard)
+Any photo containing other people ships ONLY as a **file-level crop containing
+just Bryan** — never a full group image hidden by CSS/overlap (the full file
+stays downloadable). For the desk-photo overlap look: crop each shipped file to
+roughly its visible region (small safety margin under the overlap), so the
+occlusion is redundant. **Verify by opening each derivative directly: only
+Bryan visible in every shipped file.** Same rule for the couch photo (031) if
+the ledger uses it. Uncropped originals stay only in gitignored photos-src/.
+(Blurred/background strangers count as "other people" — crop them out too.)
+
+### Station photos (casual register)
+The descent stations get chapter photos. **Station ii (New York)** gets three:
+- **26-0495-150** (gray-shirt presenting) MOVES from the work-section anchor to
+  station ii as its **main plate**, caption "BTE hackathon · Microsoft Garage".
+- **251107-...-020** (BTE hoodies, Bryan LEFTMOST — privacy-crop to Bryan) and
+  **IMG_4385** (Microsoft logo wall, solo) as two casually TILTED "desk photos"
+  scattered/overlapping beside it. If three feel heavy at 1280px, overlap the
+  two desk photos tighter.
+- Stations i and iii get no photos yet — the pattern must take photos later
+  without rework.
+
+### Work-section anchor & card 01
+- **Anchor becomes 26-0602-212** (case-comp close-up, privacy-crop away the
+  audience/teammate edges), caption "PDCE × MCG case competition · Jun 2026".
+- **Card 01 (Salesforce) gets IMG_6758** (Salesforce mascots, suit) as its side
+  photo — the one honest per-card match. Caption "Salesforce office". (Mascots
+  are costumes, not people, so no privacy crop needed; verify no bystanders.)
+
+### Ledger
+Proceeds as specced in v3, **minus photos used above** — no photo appears twice
+on the page. Row 06 uses 216 (privacy-cropped to Bryan alone on stage).
+
+---
+# v3 below — still applies except where v4 above overrides it.
 
 **DECISION (Bryan, Jul 17): add an "Also" ledger section.** The five curated cards stay untouched; AFTER the work section, add a compact numbered ledger of other real things Bryan has done. This is where the event photos legitimately live. Editorial framing: "selected work" made explicit — here's the rest.
 

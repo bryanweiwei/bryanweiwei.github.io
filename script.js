@@ -30,7 +30,7 @@
       hero = $('.hero'), tl = $('#tl'), yearEl = $('#year'),
       end = $('#contact'), prog = $('#progress'), guy = $('#guy'),
       ring = $('#ring'), waveAnchor = $('#wave-anchor'),
-      workPhoto = $('#work-photo');
+      workPhoto = $('#work-photo'), also = $('#also');
   var stations = [].slice.call(document.querySelectorAll('.station'));
   var cards = [].slice.call(document.querySelectorAll('#ring .card'));
 
@@ -699,6 +699,26 @@
         Math.max(0, Math.min(1, (S.ringIn - 0.5) * 2)).toFixed(3);
     }
 
+    /* the "Also" filmstrip rides the early dolly: after the cards dissolve it
+       fades up across the top band, holds to be read, then drifts up and out
+       before the sign-off pulls in from the right. Envelope over S.travel
+       (0->1 across the dolly), so no timeline label depends on it and the
+       mascot/dolly choreography is untouched. */
+    if (also) {
+      var tv = S.travel || 0;
+      var aOp;                                   // read: 0 -> 1 -> 0
+      if (tv < 0.1) aOp = 0;
+      else if (tv < 0.24) aOp = (tv - 0.1) / 0.14;
+      else if (tv < 0.62) aOp = 1;
+      else if (tv < 0.78) aOp = 1 - (tv - 0.62) / 0.16;
+      else aOp = 0;
+      /* settle up as the camera passes: rises in, holds, drifts up and out */
+      var aY = 22 * (1 - Math.min(1, Math.max(0, (tv - 0.1) / 0.14)))
+             - 22 * Math.min(1, Math.max(0, (tv - 0.62) / 0.16));
+      also.style.opacity = aOp.toFixed(3);
+      also.style.transform = 'translateY(' + aY.toFixed(1) + 'px)';
+    }
+
     /* soft shadow the front card casts on the paper behind it */
     var bestFace = (function () {
       var a = ((front * STEP - u * STEP) % 360 + 360) % 360;
@@ -1237,7 +1257,7 @@
     }
     if (sayHiLink) { sayHiLink.style.clipPath = ''; if (CHAR.ready) CHAR.lastClip = -1; }
     [vline, hline, node, ring, yearEl, guy]
-      .concat(cards, workPhoto ? [workPhoto] : [])
+      .concat(cards, workPhoto ? [workPhoto] : [], also ? [also] : [])
       .forEach(function (el) { el.removeAttribute('style'); });
     guy.classList.remove('p-stand', 'p-run', 'p-leap', 'waving');
     lastPose = '';
