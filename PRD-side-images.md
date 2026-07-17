@@ -57,6 +57,24 @@ on the page. Row 06 uses 216 (privacy-cropped to Bryan alone on stage).
    (boldness over caution), desk photos scale proportionally, tilt/overlap
    kept.
 
+### Checkpoint 2c changes (Bryan, Jul 17)
+1. **Card 01 plate out of the card body**: a big formal plate hung on the
+   card's RIGHT edge (overlapping it 90px on the card plane, extending
+   outward by a viewport-adaptive clamp so its projected edge stays >=12px
+   inside the viewport from 1280 up). Rides the card's 3D transform; card
+   01's copy is inset + set in dense type to hold the height budget.
+   Swept vs #tl across the ring window: 0 intersections. Flow/mobile: bold
+   inline plate between headline and copy.
+2. **Ledger = literal TIMELINE (scene)**: the parked ink line runs through
+   the section, entries alternate 06 above / 07 below / 08 above / 09 below
+   on stem+node dots, heading tops the section, little Bryan idles standing
+   on the line. Dwell/snap-rest behavior unchanged. Flow keeps the vertical
+   spine (already a timeline).
+3. **Crop rule (hard): portrait or natural aspect only, composed around
+   Bryan** — no letterbox face strips. If a privacy crop can't produce a
+   decent portrait, DROP the photo. Hackathon re-exported as a centered
+   portrait (360x711); pdce/bte/fab already complied.
+
 ---
 # v3 below — still applies except where v4 above overrides it.
 
