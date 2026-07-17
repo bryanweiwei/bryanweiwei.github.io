@@ -40,7 +40,7 @@ Identification: Bryan = black-suit presenter in 26-0602 series; LEFTMOST in both
 
 | File | What it actually shows | Caption direction | Priority |
 |---|---|---|---|
-| 26-0495-150.jpg | PRO: Bryan presenting w/ mic, gray sweatshirt, illustrated slide | "Presenting at NYU" (+ real event name if Bryan supplies) | **LEAD — use first** |
+| 26-0495-150.jpg | PRO: Bryan presenting w/ mic, gray sweatshirt, illustrated slide — BTE hackathon at Microsoft Garage | "BTE hackathon · Microsoft Garage" (confirmed by Bryan Jul 17) | **LEAD — use first** |
 | 26-0602-216.jpg | PRO: Bryan speaking, slide + Stern podium + audience | "PDCE × MCG case competition · Jun 2026" | High |
 | 26-0602-212.jpg | PRO close-up: warm smile mid-presentation, black suit | same event caption | High |
 | IMG_2764.jpeg | Bryan demoing wired breadboard device | "Demoing hackathon hardware" | High (only build shot; crop the occluded right third) |
