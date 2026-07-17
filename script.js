@@ -699,24 +699,14 @@
         Math.max(0, Math.min(1, (S.ringIn - 0.5) * 2)).toFixed(3);
     }
 
-    /* the "Also" filmstrip rides the early dolly: after the cards dissolve it
-       fades up across the top band, holds to be read, then drifts up and out
-       before the sign-off pulls in from the right. Envelope over S.travel
-       (0->1 across the dolly), so no timeline label depends on it and the
-       mascot/dolly choreography is untouched. */
+    /* the "Also" ledger dwell: S.alsoIn (tweened on the master timeline,
+       with a held plateau and its own snap label) drives the panel — the
+       camera is parked mid-dolly, the panel rises around the stopped
+       line, and little Bryan idles on it (see the guy choreography). */
     if (also) {
-      var tv = S.travel || 0;
-      var aOp;                                   // read: 0 -> 1 -> 0
-      if (tv < 0.1) aOp = 0;
-      else if (tv < 0.24) aOp = (tv - 0.1) / 0.14;
-      else if (tv < 0.62) aOp = 1;
-      else if (tv < 0.78) aOp = 1 - (tv - 0.62) / 0.16;
-      else aOp = 0;
-      /* settle up as the camera passes: rises in, holds, drifts up and out */
-      var aY = 22 * (1 - Math.min(1, Math.max(0, (tv - 0.1) / 0.14)))
-             - 22 * Math.min(1, Math.max(0, (tv - 0.62) / 0.16));
-      also.style.opacity = aOp.toFixed(3);
-      also.style.transform = 'translateY(' + aY.toFixed(1) + 'px)';
+      var ai = S.alsoIn || 0;
+      also.style.opacity = ai.toFixed(3);
+      also.style.transform = 'translateY(' + (18 * (1 - ai)).toFixed(1) + 'px)';
     }
 
     /* soft shadow the front card casts on the paper behind it */
@@ -746,7 +736,7 @@
     var cardTopX = (ringX - 174) * MAGc;
     var cardTopY = -152 * MAGc + 10;
     if (p < 80.5) revealSayHi(0);   /* the sign-off stays hidden until the run */
-    if (p >= 90.9) {
+    if (p >= 96.1) {
       /* waves standing ON the settled line, at the sign-off */
       guy.style.opacity = 1;
       var r = waveAnchor.getBoundingClientRect();
@@ -783,25 +773,37 @@
         CHAR.prevDropT = d;
         gctx.mode = 'jump';
         gctx.frac = Math.max(0.03, Math.min(0.97, d));
-      } else if (p < 88.2) {
-        /* the traveling run: eases into frame-left, world streams by */
+      } else if (p >= 84.6 && p < 89.4) {
+        /* THE LEDGER DWELL: the camera is stopped, the "Also" panel is
+           up around the line — he stands at his dolly framing spot and
+           idles ON the line (which reads as the ledger's middle
+           hairline). The idle fidget system takes over at rest. */
+        gx2 = holdX;
+        gy2 = lineY;
+        gctx.mode = 'idle';
+        gctx.frac = 0;
+        CHAR.prevDropT = 0;
+      } else if (p < 93.4) {
+        /* the traveling run: eases into frame-left, world streams by
+           (covers both dolly legs; during the first he eases in, after
+           the dwell he holds frame-left as the world resumes) */
         var fT = smooth((p - 81.6) / 1.6);
         gx2 = (cardTopX + 26) + (holdX - cardTopX - 26) * fT;
         gy2 = lineY;
         gctx.mode = 'run';
         gctx.runX = travelPx2 + gx2;   /* ground-relative: legs churn with the dolly */
         CHAR.prevDropT = 0;
-      } else if (p < 89.3) {
+      } else if (p < 94.5) {
         /* arrival: runs the last stretch, drawing in "Say hi." as he goes */
-        var rT = smooth((p - 88.2) / 1.1);
+        var rT = smooth((p - 93.4) / 1.1);
         gx2 = holdX + (takeoffX - holdX) * rT;
         gy2 = lineY;
         gctx.mode = 'run';
         gctx.runX = travelPx2 + gx2;
-      } else if (p < 90.5) {
+      } else if (p < 95.7) {
         /* the flourish: springs up, a full forward flip, lands on the
            period at the sign-off — a pure function of progress, scrub-safe */
-        var fF = (p - 89.3) / 1.2;
+        var fF = (p - 94.5) / 1.2;
         var eF = smooth(fF);
         gx2 = takeoffX + (tx - takeoffX) * eF;
         gy2 = lineY - Math.sin(Math.PI * fF) * 82;
@@ -820,7 +822,7 @@
       gctx.y = gy2;
       gctx.visible = true;
       /* draw "Say hi." in left-to-right, its edge tracking his feet */
-      if (p < 88.2) {
+      if (p < 93.4) {
         revealSayHi(0);
       } else {
         var lr = sayHiLink ? sayHiLink.getBoundingClientRect() : null;
@@ -989,7 +991,7 @@
       }
     });
 
-    S = { grow: 0, retract: 0, elbow: 0, slide: 0, u: 0, ringIn: 0, swing: 0, lineDrop: 0, travel: 0 };
+    S = { grow: 0, retract: 0, elbow: 0, slide: 0, u: 0, ringIn: 0, swing: 0, lineDrop: 0, travel: 0, alsoIn: 0 };
 
     initChar();
     guy.classList.remove('p-stand', 'p-run', 'p-leap', 'waving');
@@ -1121,26 +1123,38 @@
     master.to(S, { ringIn: 0, duration: 2.5, ease: 'power1.in' }, 80.5);
     master.to(tl, { opacity: 0, duration: 2, ease: 'power1.in' }, 80.5);
 
-    /* THE DOLLY: the perspective moves horizontally onward along the
-       line, out of the work and into the end page */
-    master.to(S, { travel: 1, duration: 6, ease: 'power2.inOut' }, 81.6);
+    /* THE DOLLY, part one: the camera travels along the line and
+       DECELERATES INTO THE LEDGER — a station stop halfway to the end */
+    master.to(S, { travel: 0.45, duration: 3, ease: 'power2.inOut' }, 81.6);
+
+    /* THE "ALSO" LEDGER DWELL: the panel fades up around the line while
+       the camera is stopped, HOLDS from 85.2 to 88.6 (a real, readable
+       rest — the 'also' label makes the snap settle here, and little
+       Bryan idles on the line, which doubles as the ledger's middle
+       hairline), then clears before the dolly resumes */
+    master.to(S, { alsoIn: 1, duration: 1.6, ease: 'power2.out' }, 83.6);
+    master.addLabel('also', 86.5);
+    master.to(S, { alsoIn: 0, duration: 1.4, ease: 'power2.in' }, 88.6);
+
+    /* THE DOLLY, part two: onward into the end page */
+    master.to(S, { travel: 1, duration: 3.4, ease: 'power2.inOut' }, 89.4);
 
     /* FINALE — it arrives with the camera: slides in from the right
        as the dolly decelerates, like pulling into a station */
     gsap.set(end, { opacity: 0 });
     master.fromTo(end, { opacity: 0, x: '38vw' },
-      { opacity: 1, x: '0vw', duration: 3, ease: 'power3.out' }, 87.2);
+      { opacity: 1, x: '0vw', duration: 3, ease: 'power3.out' }, 92.4);
     master.from(wordSplits.end, {
       yPercent: 60, opacity: 0, duration: 2.6,
       ease: 'power3.out', stagger: 0.07
-    }, 88.2);
+    }, 93.4);
 
     /* the line doesn't leave: it eases down and settles as the
        broadsheet rule under the sign-off, part of the final page */
-    master.to(S, { lineDrop: 1, duration: 1.8, ease: 'power2.inOut' }, 88.4);
+    master.to(S, { lineDrop: 1, duration: 1.8, ease: 'power2.inOut' }, 93.6);
 
     /* the composed end-page rest point */
-    master.addLabel('home', 90.9);
+    master.addLabel('home', 96.1);
 
     /* pad the tail so the timeline is exactly 100 units — a calm hold
        after the finale, and unit thresholds stay honest */

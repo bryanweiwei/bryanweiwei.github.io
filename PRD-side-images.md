@@ -40,6 +40,23 @@ The descent stations get chapter photos. **Station ii (New York)** gets three:
 Proceeds as specced in v3, **minus photos used above** — no photo appears twice
 on the page. Row 06 uses 216 (privacy-cropped to Bryan alone on stage).
 
+### Checkpoint 2b changes (Bryan, Jul 17)
+1. **Work-section anchor DELETED** — left column back to clean whitespace (the
+   case comp lives in ledger row 06). The collision-safe zone code (dormant
+   `html.scene #work-photo` CSS + ringIn fade in script.js) is KEPT for a
+   future photo; the pdce-closeup derivatives were removed.
+2. **Ledger = alternating full-width rows** (06 photo left / text right, 07
+   mirrored, ...), numbering + hairline dividers kept, photos substantially
+   bigger.
+3. **Ledger readable at rest**: in scene mode it is a pinned DWELL — the
+   dolly parks mid-travel, the panel rises around the stopped ink line
+   (which doubles as the middle hairline), an `also` snap label holds the
+   rest, and little Bryan idles standing on the line instead of running
+   through. No snap-through.
+4. **Station ii photos noticeably bigger** — plate min(38vw, 470px) in scene
+   (boldness over caution), desk photos scale proportionally, tilt/overlap
+   kept.
+
 ---
 # v3 below — still applies except where v4 above overrides it.
 
