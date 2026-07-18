@@ -824,7 +824,12 @@
           gctx.frac = 0;
         }
         CHAR.prevDropT = 0;
-        setActiveAlso(sf < 0.5 ? si : si + 1);         /* the entry he's on / arriving at */
+        /* Which entry is "active" — with a dwell threshold so the emphasis
+           only moves when he's actually resting on / landing on a node,
+           never mid-hop. Hysteresis (settle at sf<=0.6, arrive at sf>=0.9;
+           hold between) kills scale-jitter and still reverses cleanly. */
+        if (sf <= 0.6) setActiveAlso(si);
+        else if (sf >= 0.9) setActiveAlso(si + 1);
       } else if (p < 96.4) {
         /* the traveling run: pre-dwell he eases off the card onto the
            first ledger node; post-dwell he slides off the last node back

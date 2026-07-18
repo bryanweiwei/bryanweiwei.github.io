@@ -676,7 +676,7 @@ html.scene .hero::after { display: none; }
   font-family: var(--serif);
   font-style: italic;
   font-weight: 600;
-  font-size: 22px;
+  font-size: 25px;
   color: var(--pop-deep);
   line-height: 1.2;
 }
@@ -684,15 +684,15 @@ html.scene .hero::after { display: none; }
 .also-txt h3 {
   font-family: var(--serif);
   font-weight: 600;
-  font-size: clamp(22px, 3vw, 30px);
+  font-size: clamp(25px, 3.2vw, 34px);
   line-height: 1.08;
   letter-spacing: -0.01em;
 }
 
 .also-txt p {
   margin-top: 8px;
-  font-size: 13.5px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.65;
   color: var(--soft);
   max-width: 42ch;
 }
@@ -715,7 +715,7 @@ html.scene .hero::after { display: none; }
 
 .also-fig figcaption {
   margin-top: 7px;
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1157,13 +1157,31 @@ html.scene #also .also-row:nth-child(odd)::after { top: auto; bottom: -44px; }
 html.scene #also .also-row:nth-child(even)::before { top: -36px; bottom: auto; }
 html.scene #also .also-row:nth-child(even)::after { top: -44px; bottom: auto; }
 
-/* micro-moment: the node little Bryan is standing on pops, and its entry
-   number warms from the deep green to the bright accent. Toggled by JS
-   (.is-active, set from the scroll position) so it reverses on scroll-up;
-   scene-only, so reduced motion never triggers it. */
+/* micro-moment: the entry little Bryan is standing on ENLARGES — its
+   photo + title scale up (transform only, so neighbours never reflow),
+   its node dot pops, and its number warms from deep to bright green.
+   Toggled by JS (.is-active, set from scroll position with a dwell
+   threshold) so it reverses on scroll-up without jitter; scene-only, so
+   reduced motion keeps everything at base scale. Photos scale TOWARD the
+   line (origin pinned on the nav-/viewport-edge side) so the risky screen
+   edges stay put and nothing clips. Gentle overshoot on arrival. */
 html.scene #also .also-row.is-active::after { transform: scale(1.55); }
 html.scene #also .also-row .also-no { transition: color .34s ease; }
 html.scene #also .also-row.is-active .also-no { color: var(--pop); }
+
+/* scale the whole figure (plate + caption together, so the plate never
+   overlaps its own caption); odd entries grow down from a pinned top,
+   even entries grow up from a pinned bottom — i.e. toward the line, away
+   from the nav / viewport edges. */
+html.scene #also .also-fig,
+html.scene #also .also-txt h3 {
+  transition: transform .4s cubic-bezier(.34, 1.5, .58, 1);   /* gentle overshoot */
+}
+html.scene #also .also-txt h3 { transform-origin: left center; }
+html.scene #also .also-row:nth-child(odd) .also-fig { transform-origin: center top; }
+html.scene #also .also-row:nth-child(even) .also-fig { transform-origin: center bottom; }
+html.scene #also .also-row.is-active .also-fig { transform: scale(1.09); }
+html.scene #also .also-row.is-active .also-txt h3 { transform: scale(1.07); }
 
 /* entry innards: big portrait plate left, number/title/copy right */
 html.scene #also .also-fig {
@@ -1181,7 +1199,7 @@ html.scene #also .also-fig img {
    viewport bottom (the below pair runs a touch larger — the alternation
    reads dynamic, not uneven) */
 html.scene #also .also-row:nth-child(odd) .also-fig img {
-  max-height: min(calc(49.7vh - 128px), 300px);
+  max-height: min(calc(49.7vh - 158px), 300px);   /* clears the nav w/ margin */
 }
 html.scene #also .also-row:nth-child(even) .also-fig img {
   max-height: min(calc(50.3vh - 124px), 320px);
@@ -1195,7 +1213,7 @@ html.scene #also .also-fig figcaption {
 html.scene #also .also-row:nth-child(n) .also-no {
   grid-column: 2;
   grid-row: 1;
-  font-size: clamp(17px, 1.5vw, 22px);
+  font-size: clamp(20px, 1.85vw, 27px);
   text-align: left;
 }
 html.scene #also .also-row:nth-child(n) .also-txt {
@@ -1205,12 +1223,12 @@ html.scene #also .also-row:nth-child(n) .also-txt {
 }
 html.scene #also .also-row:nth-child(n) .also-txt p { margin-left: 0; }
 html.scene #also .also-txt h3 {
-  font-size: clamp(19px, 1.8vw, 26px);
+  font-size: clamp(23px, 2.2vw, 31px);
   line-height: 1.08;
 }
 html.scene #also .also-txt p {
-  font-size: 12.5px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.6;
   margin-top: 7px;
   max-width: 34ch;
 }

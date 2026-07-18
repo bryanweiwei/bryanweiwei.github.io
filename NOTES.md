@@ -24,11 +24,21 @@ All source of truth is `PRD-side-images.md`.
    09 PDCE × MCG Case Competition), each with a portrait photo + caption.
    - **Scene mode:** a literal horizontal timeline. The parked ink line is the
      spine; entries alternate above/below on node dots; little Bryan walks the
-     line as you scroll, hopping node-to-node, and the node he's on "pops" while
-     its number warms to green. **Free scroll — no snap stop** (removed the `also`
-     snap label; the camera park still gives it its readable window).
+     line as you scroll, hopping node-to-node. The entry he's on **enlarges**
+     (photo + title transform-scale ~1.07–1.09x with a gentle overshoot), its
+     node pops, its number warms to the bright green; the others settle to base
+     scale. Driven by a dwell threshold (settle sf≤0.6 / arrive sf≥0.9) so it
+     never jitters between nodes; fully reversible. **Free scroll — no snap stop**
+     (removed the `also` snap label; the camera park still gives its readable
+     window). Entry 09 lands + rests while the panel is fully up.
    - **Flow / mobile:** the same four entries as a vertical timeline, photo inline
      under each title.
+   - **Type scale:** titles/numbers/descriptions/captions bumped up a notch in
+     both modes (titles read across the room, descriptions at arm's length).
+   - **No-clip guard:** the active enlarge is transform-only (neighbours never
+     reflow); photos scale *toward the line* (odd origin top, even origin bottom)
+     so nav/viewport edges stay clear. The odd (above-line) photo cap was
+     tightened (`49.7vh − 158px`) so the taller text clears the nav.
 
 ## Key decisions
 
@@ -41,7 +51,7 @@ All source of truth is `PRD-side-images.md`.
 - **Also section = free scroll, no snap** (Bryan's call, 2026-07-18). The
   per-node micro-moments replace the old snap-rest.
 
-## Checkpoint 3 QA — results (2026-07-18)
+## Checkpoint 3 QA — results (re-run 2026-07-19 after the type-scale + active-enlarge pass)
 
 Ran headless Chrome (puppeteer-core driving the installed Chrome) over a full
 top-to-bottom scroll at three configs. All green:
@@ -57,7 +67,9 @@ top-to-bottom scroll at three configs. All green:
 | Derivative weights | **1x 16–33 KB, 2x 50–108 KB — sane** |
 | Privacy: opened every derivative directly, only Bryan visible | **all 8 pass** (bte-group double-checked at zoom: neighbour was his own hood/undershirt + brick wall) |
 | Mobile: station cluster + card 01 + all 4 ledger entries render, captioned, reachable | **verified via screenshots** |
-| Reduced motion: static alternating ledger, all photos visible | **verified** |
+| Reduced motion: static alternating ledger, all photos visible, all at base scale | **verified** |
+| Scene collision sweep @ 1280×800 **and** 1280×720 (active/scaled rows measured) | **no nav/viewport/edge violations, no neighbour overlap** |
+| Active emphasis: monotonic 06→07→08→09, no jitter (dwell threshold) | **verified** |
 
 ## Morning checklist (eyeball before merge)
 
