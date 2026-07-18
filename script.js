@@ -33,6 +33,24 @@
       workPhoto = $('#work-photo'), also = $('#also');
   var stations = [].slice.call(document.querySelectorAll('.station'));
   var cards = [].slice.call(document.querySelectorAll('#ring .card'));
+  var alsoRows = also ? [].slice.call(also.querySelectorAll('.also-row')) : [];
+
+  /* the ledger node centers as guy-space X (origin = screen center):
+     fractions mirror the .also-row nth-child slot centers in style.css
+     (left + width/2), so little Bryan lands exactly on each node dot */
+  var ALSO_NODES = [0.165, 0.39, 0.59, 0.83];
+  function alsoNodeGX(i) { return vw * (ALSO_NODES[i] - 0.5); }
+
+  /* highlight the active ledger entry (pop the node + warm its number);
+     idx<0 clears. Only touches the DOM on change, so it's scrub-cheap
+     and reverses cleanly on scroll-up. */
+  var activeAlso = -1;
+  function setActiveAlso(idx) {
+    if (idx === activeAlso) return;
+    if (activeAlso >= 0 && alsoRows[activeAlso]) alsoRows[activeAlso].classList.remove('is-active');
+    if (idx >= 0 && alsoRows[idx]) alsoRows[idx].classList.add('is-active');
+    activeAlso = idx;
+  }
 
   var YEARS = ['2025', '2025', '2026', '2026', '2026'];
   var N = cards.length, STEP = 360 / N, RADIUS = 340, SPACING = 600;
@@ -709,6 +727,7 @@
       var ai = S.alsoIn || 0;
       also.style.opacity = ai.toFixed(3);
       also.style.transform = 'translateY(' + (18 * (1 - ai)).toFixed(1) + 'px)';
+      if (ai <= 0.01) setActiveAlso(-1);   /* no highlight while hidden */
     }
 
     /* soft shadow the front card casts on the paper behind it */
@@ -776,25 +795,47 @@
         gctx.mode = 'jump';
         gctx.frac = Math.max(0.03, Math.min(0.97, d));
       } else if (p >= 84.6 && p < 93.0) {
-        /* THE LEDGER DWELL: the camera is stopped, the "Also" timeline is
-           up around the line — he stands at his dolly framing spot and
-           idles ON the line (which doubles as the ledger's timeline).
-           The idle fidget system takes over at rest. */
-        gx2 = holdX;
-        gy2 = lineY;
-        gctx.mode = 'idle';
-        gctx.frac = 0;
+        /* THE LEDGER DWELL: the camera is parked and the "Also" timeline
+           is up around the line. As you scroll, little Bryan walks the
+           line — resting on a node, then hopping to the next — and the
+           node he's on is the "active" entry (its dot pops, its number
+           warms green, see .also-row.is-active in style.css). It's a pure
+           function of scroll, so it reverses on scroll-up; and it only
+           lives in scene mode, so reduced-motion never sees it. */
+        var last = ALSO_NODES.length - 1;              /* 3 */
+        var w = (p - 84.6) / (93.0 - 84.6);            /* 0..1 across the dwell */
+        var segF = w * last;                           /* 0..3, one unit per leg */
+        var si = Math.max(0, Math.min(last - 1, Math.floor(segF)));
+        var sf = Math.max(0, Math.min(1, segF - si));  /* progress within this leg */
+        var hopT = sf <= 0.6 ? 0 : (sf - 0.6) / 0.4;   /* rest ~60%, then hop */
+        gx2 = alsoNodeGX(si) + (alsoNodeGX(si + 1) - alsoNodeGX(si)) * smooth(hopT);
+        gy2 = lineY - hopArc(hopT) * 30;
+        if (hopT > 0 && hopT < 1) {
+          gctx.mode = 'jump';
+          gctx.frac = Math.max(0.03, Math.min(0.97, hopT));
+        } else {
+          gctx.mode = 'idle';                          /* idle fidget at each node */
+          gctx.frac = 0;
+        }
         CHAR.prevDropT = 0;
+        setActiveAlso(sf < 0.5 ? si : si + 1);         /* the entry he's on / arriving at */
       } else if (p < 96.4) {
-        /* the traveling run: eases into frame-left, world streams by
-           (covers both dolly legs; during the first he eases in, after
-           the dwell he holds frame-left as the world resumes) */
-        var fT = smooth((p - 81.6) / 1.6);
-        gx2 = (cardTopX + 26) + (holdX - cardTopX - 26) * fT;
+        /* the traveling run: pre-dwell he eases off the card onto the
+           first ledger node; post-dwell he slides off the last node back
+           to frame-left and holds there as the world streams past */
+        if (p >= 93.0) {
+          var lastX = alsoNodeGX(ALSO_NODES.length - 1);
+          var backT = smooth(Math.min(1, (p - 93.0) / 1.3));
+          gx2 = lastX + (holdX - lastX) * backT;
+        } else {
+          var fT = smooth((p - 81.6) / (84.6 - 81.6));
+          gx2 = (cardTopX + 26) + (alsoNodeGX(0) - cardTopX - 26) * fT;
+        }
         gy2 = lineY;
         gctx.mode = 'run';
         gctx.runX = travelPx2 + gx2;   /* ground-relative: legs churn with the dolly */
         CHAR.prevDropT = 0;
+        setActiveAlso(-1);
       } else if (p < 97.5) {
         /* arrival: runs the last stretch, drawing in "Say hi." as he goes */
         var rT = smooth((p - 96.4) / 1.1);
@@ -1132,11 +1173,12 @@
     /* THE "ALSO" LEDGER DWELL: the panel fades up around the line while
        the camera is stopped and HOLDS from 85.0 to 92.2 — 7.2 units,
        roughly 60vh of runway scroll where the page is simply PARKED on
-       the timeline, readable at leisure. The 'also' label (mid-hold)
-       gives the snap a wide rest basin, and little Bryan idles on the
-       line, which doubles as the ledger's timeline. */
+       the timeline, readable at leisure. NO snap label here on purpose:
+       the section stays free-scroll (no rest basin pulling you in), and
+       little Bryan walks the line node-to-node as you scroll (see the
+       ledger dwell in renderScene), the line doubling as the ledger's
+       timeline. */
     master.to(S, { alsoIn: 1, duration: 1.4, ease: 'power2.out' }, 83.6);
-    master.addLabel('also', 88.5);
     master.to(S, { alsoIn: 0, duration: 1.2, ease: 'power2.in' }, 92.2);
 
     /* THE DOLLY, part two: onward into the end page */

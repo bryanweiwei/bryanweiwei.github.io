@@ -1150,11 +1150,20 @@ html.scene #also .also-row::after {
   border-radius: 50%;
   background: var(--pop);
   border: 2px solid var(--ink);
+  transition: transform .34s cubic-bezier(.34, 1.56, .64, 1);   /* pop w/ overshoot */
 }
 html.scene #also .also-row:nth-child(odd)::before { top: auto; bottom: -36px; }
 html.scene #also .also-row:nth-child(odd)::after { top: auto; bottom: -44px; }
 html.scene #also .also-row:nth-child(even)::before { top: -36px; bottom: auto; }
 html.scene #also .also-row:nth-child(even)::after { top: -44px; bottom: auto; }
+
+/* micro-moment: the node little Bryan is standing on pops, and its entry
+   number warms from the deep green to the bright accent. Toggled by JS
+   (.is-active, set from the scroll position) so it reverses on scroll-up;
+   scene-only, so reduced motion never triggers it. */
+html.scene #also .also-row.is-active::after { transform: scale(1.55); }
+html.scene #also .also-row .also-no { transition: color .34s ease; }
+html.scene #also .also-row.is-active .also-no { color: var(--pop); }
 
 /* entry innards: big portrait plate left, number/title/copy right */
 html.scene #also .also-fig {
