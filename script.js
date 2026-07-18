@@ -803,7 +803,13 @@
            function of scroll, so it reverses on scroll-up; and it only
            lives in scene mode, so reduced-motion never sees it. */
         var last = ALSO_NODES.length - 1;              /* 3 */
-        var w = (p - 84.6) / (93.0 - 84.6);            /* 0..1 across the dwell */
+        /* Walk across ONLY the fully-visible plateau, not the whole dwell:
+           finish on node 09 by ~91.2 (the panel fades from 92.2), then he
+           rests there while it's still up. Mapping the walk across the
+           entire 84.6..93.0 made him land on 09 exactly as the panel left,
+           so 09 never got a readable beat. Clamped, so he rests on 06
+           before the walk and on 09 after it. */
+        var w = Math.max(0, Math.min(1, (p - 85.2) / (91.2 - 85.2)));
         var segF = w * last;                           /* 0..3, one unit per leg */
         var si = Math.max(0, Math.min(last - 1, Math.floor(segF)));
         var sf = Math.max(0, Math.min(1, segF - si));  /* progress within this leg */
