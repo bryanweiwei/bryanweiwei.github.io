@@ -1077,11 +1077,21 @@
        projection — Lenis supplies the inertia; snap only tidies the
        landing so the page always rests composed */
     var labelRatios = [];
+    /* the "Also" ledger dwell (sections 06–09) is deliberately free-scroll:
+       little Bryan walks the line node-to-node and you rest on whatever entry
+       you stop on. There's no snap label inside it, so without this guard the
+       nearest-label snap yanks you to the closest waypoint OUTSIDE the dwell —
+       card 5 (0.786) from the top of the ledger, the finale (0.991) from the
+       bottom. That's the "land on 06, get pulled back to 05" bug. Holding
+       position inside the band keeps you on the entry you're reading. Bounds
+       mirror the dwell in renderScene (p 84.6–93.0; timeline padded to 100u). */
+    var DWELL_LO = 0.846, DWELL_HI = 0.930;
     function nearestLabel(value, self) {
       /* ST hands us a velocity-projected value; a hard flick projects
          to the extremes. Snap from ACTUAL progress instead — Lenis
          supplies the inertia, snap only tidies the landing. */
       var from = self ? self.progress : value;
+      if (from >= DWELL_LO && from < DWELL_HI) return from;   /* free-scroll: don't pull off the ledger */
       var best = 0, bd = 2;
       for (var i = 0; i < labelRatios.length; i++) {
         var d = Math.abs(labelRatios[i] - from);
