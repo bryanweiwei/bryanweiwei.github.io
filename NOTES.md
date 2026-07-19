@@ -3,7 +3,7 @@
 Internal working notes. Like the PRDs, this file is **stripped from `main` at
 deploy** — it should never ship to GitHub Pages.
 
-_Last updated: 2026-07-18 (Checkpoint 3 QA complete; not yet merged)._
+_Last updated: 2026-07-19 (finale foot-fix; Checkpoint 3 QA complete; not yet merged)._
 
 ---
 
@@ -50,6 +50,12 @@ All source of truth is `PRD-side-images.md`.
 - **No photo appears twice** on the page.
 - **Also section = free scroll, no snap** (Bryan's call, 2026-07-18). The
   per-node micro-moments replace the old snap-rest.
+- **Finale foot-fix** (2026-07-19): `dropPx` mapped little Bryan's feet ~22px
+  below where the GL layer actually projects the descended rule, so the line cut
+  across his shins at rest. Added `LINE_FOOT_FIX = 22`, scaled by `lineDrop`, so
+  he eases onto the rule as it forms and rests standing *on top* of it (feet-y
+  measured on the line, not through it). Zero effect on the ledger walk (drop=0
+  there) and no jump at the landing→wave seam.
 
 ## Checkpoint 3 QA — results (re-run 2026-07-19 after the type-scale + active-enlarge pass)
 

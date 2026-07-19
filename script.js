@@ -756,6 +756,11 @@
     var MAGc = 1300 / (1300 - RADIUS);
     var cardTopX = (ringX - 174) * MAGc;
     var cardTopY = -152 * MAGc + 10;
+    /* dropPx maps his feet ~22px BELOW where the GL layer actually projects
+       the descended rule, so at rest the line cut across his shins. Lift him
+       back onto it; scaled by lineDrop so it's 0 during the ledger walk (his
+       line ref is the parked ink line there) and eases in as the rule forms. */
+    var LINE_FOOT_FIX = 22;
     if (p < 80.5) revealSayHi(0);   /* the sign-off stays hidden until the run */
     if (p >= 99.1) {
       /* waves standing ON the settled line, at the sign-off */
@@ -763,7 +768,7 @@
       var r = waveAnchor.getBoundingClientRect();
       dropPx = r.bottom + 30 - vh / 2;
       if (GL.ready) GL.dropPx = dropPx;
-      var wy = dropPx;
+      var wy = dropPx - LINE_FOOT_FIX;   /* stand ON the rule, not through it */
       guy.style.transform =
         'translate(' + (r.left - vw / 2 + 34) + 'px,' + wy + 'px)';
       gctx.mode = 'wave';
@@ -871,6 +876,7 @@
         gctx.mode = 'idle';
         gctx.frac = 0;
       }
+      gy2 -= LINE_FOOT_FIX * (S.lineDrop || 0);   /* ride the rule as it descends */
       guy.style.transform =
         'translate(' + gx2 + 'px,' + gy2 + 'px) rotate(' + flipDeg + 'deg)';
       gctx.y = gy2;
