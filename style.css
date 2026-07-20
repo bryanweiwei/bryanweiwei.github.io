@@ -311,6 +311,7 @@ nav .logo {
   color: var(--accent);
 }
 
+
 /* headshot in the sign-off column */
 .byline-photo {
   margin: 0 0 14px auto;
@@ -457,6 +458,92 @@ html.scene .hero::after { display: none; }
 
 #story { padding-bottom: 2vh; }
 
+/* captioned photo vignette: ink plate + paper mat + hard offset shadow,
+   caption in small caps beneath. Flow/mobile: an inline figure. The
+   pattern is reusable (stations etc.) — see PRD-side-images.md. */
+.vignette {
+  margin: 5vh auto;
+  max-width: 400px;
+  padding: 0 4vw;
+}
+
+.vignette img {
+  display: block;
+  width: 100%;
+  height: auto;
+  padding: 4px;                         /* the mat */
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 6px 6px 0 rgba(14, 22, 17, 0.10);
+}
+
+.vignette figcaption {
+  margin-top: 9px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--soft);
+}
+
+/* ---- STORY register: casual chapter photos at the stations ----
+   Paper borders (white print mat, soft shadow — deliberately NOT the ink
+   frame), slight tilts, overlapping. Any .station can carry a .st-photos
+   cluster: one .st-plate (captioned) + up to two .st-desk snapshots.
+   Stations without photos need no changes. See PRD-side-images.md. */
+.st-photos {
+  position: relative;
+  margin: 20px 0 84px;                  /* bottom reserves the desk overhang */
+  max-width: 500px;
+}
+
+.st-photos figure { margin: 0; }
+
+.st-photos img {
+  display: block;
+  width: 100%;
+  height: auto;
+  padding: 5px;                         /* the paper print border */
+  background: #fff;
+  border: 1px solid rgba(14, 22, 17, 0.16);
+  box-shadow: 0 3px 14px rgba(14, 22, 17, 0.16);
+}
+
+.st-plate {
+  position: relative;
+  z-index: 1;
+  transform: rotate(-1.4deg);
+}
+
+.st-plate figcaption {
+  margin-top: 8px;
+  max-width: 42%;                       /* clear of the desk-photo overlap */
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  line-height: 1.6;
+  text-transform: uppercase;
+  color: var(--soft);
+}
+
+.st-desk { position: absolute; }
+
+.st-desk-a {
+  width: 31%;
+  right: -5%;
+  bottom: -58px;
+  transform: rotate(4.5deg);
+  z-index: 3;
+}
+
+.st-desk-b {
+  width: 33%;
+  right: 18%;
+  bottom: -66px;
+  transform: rotate(-5.5deg);
+  z-index: 2;
+}
+
 .station {
   position: relative;
   padding: 5vh 0;
@@ -487,6 +574,152 @@ html.scene .hero::after { display: none; }
   border-radius: 50%;
   background: var(--pop);
   border: 2px solid var(--ink);
+}
+
+/* the "Also" ledger (flow/mobile). Continues the timeline spine below the
+   cards; numbered hairline rows, not cards, with a small WORK-register
+   photo plate per row. Scene-mode overrides live in section 8. */
+#also {
+  position: relative;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 2vh 4vw 8vh calc(4vw + 44px);
+}
+
+#also::before {
+  content: "";
+  position: absolute;
+  left: calc(4vw + 12px);
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--ink);
+}
+
+.also-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--soft);
+}
+
+.also-head {
+  font-family: var(--serif);
+  font-weight: 640;
+  font-size: clamp(30px, 4vw, 44px);
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  margin-top: 6px;
+}
+
+.also-head em {
+  font-style: italic;
+  font-weight: 420;
+  text-transform: none;
+  color: var(--accent);
+}
+
+.also-list {
+  list-style: none;
+  margin-top: 3vh;
+}
+
+/* alternating full-width rows: 06 photo left / text right, 07 mirrored,
+   and so on (Bryan, checkpoint 2b) — hairline-divided, numbering kept */
+.also-row {
+  position: relative;
+  display: grid;
+  gap: 6px 30px;
+  align-items: center;
+  padding: 30px 0;
+  border-top: 1px solid rgba(14, 22, 17, 0.14);
+}
+
+.also-row:first-child { border-top: none; }
+
+.also-row:nth-child(odd) { grid-template-columns: minmax(0, 44%) 1fr; }
+.also-row:nth-child(odd) .also-fig { grid-column: 1; grid-row: 1 / span 2; }
+.also-row:nth-child(odd) .also-no { grid-column: 2; align-self: end; }
+.also-row:nth-child(odd) .also-txt { grid-column: 2; align-self: start; }
+
+.also-row:nth-child(even) { grid-template-columns: 1fr minmax(0, 44%); }
+.also-row:nth-child(even) .also-fig { grid-column: 2; grid-row: 1 / span 2; }
+.also-row:nth-child(even) .also-no {
+  grid-column: 1;
+  grid-row: 1;
+  text-align: right;
+  align-self: end;
+}
+.also-row:nth-child(even) .also-txt {
+  grid-column: 1;
+  text-align: right;
+  align-self: start;
+}
+.also-row:nth-child(even) .also-txt p { margin-left: auto; }
+
+/* dot on the spine, matching the card beats above */
+.also-row::before {
+  content: "";
+  position: absolute;
+  left: -38px;
+  top: 28px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--pop);
+  border: 2px solid var(--ink);
+}
+
+.also-no {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 25px;
+  color: var(--pop-deep);
+  line-height: 1.2;
+}
+
+.also-txt h3 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(25px, 3.2vw, 34px);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+}
+
+.also-txt p {
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--soft);
+  max-width: 42ch;
+}
+
+.also-fig {
+  margin: 0;
+  width: 100%;
+}
+
+.also-fig img {
+  display: block;
+  width: 100%;
+  height: auto;                         /* natural aspect: the privacy crops
+                                           are portraits; keep faces framed */
+  padding: 3px;                         /* the mat */
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 5px 5px 0 rgba(14, 22, 17, 0.10);
+}
+
+.also-fig figcaption {
+  margin-top: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--soft);
 }
 
 #tl, #year, #scene, #runway, .grain, #ring-shadow { display: none; }
@@ -695,6 +928,28 @@ html.scene .station .txt {
 html.scene .station.left .txt { right: calc(50% + 44px); text-align: right; }
 html.scene .station.right .txt { left: calc(50% + 44px); }
 
+/* station chapter photos ride the station across the OTHER side of the
+   line from the text (the station element carries the scroll animation,
+   so the cluster fades/moves with it for free). 60px off the center line
+   keeps the cluster clear of the ink line and little Bryan's descent.
+   Sized BOLD (checkpoint 2b): the plate holds its own against the
+   station headline. */
+html.scene .st-photos {
+  position: absolute;
+  top: 0;
+  transform: translateY(-50%);
+  width: min(38vw, 470px);
+  margin: 0;
+}
+
+html.scene .station.right .st-photos { right: calc(50% + 60px); }
+html.scene .station.left .st-photos { left: calc(50% + 60px); }
+
+/* the desk snapshots tuck against the plate's lower-right (percent
+   widths, so they scale with the plate) */
+html.scene .st-desk-a { bottom: -56px; right: -4%; }
+html.scene .st-desk-b { bottom: -66px; right: 20%; }
+
 /* the 3D ring */
 html.scene #work {
   position: fixed;
@@ -776,6 +1031,206 @@ html.scene #tl .tl-title {
   font-style: italic;
   font-weight: 480;
   font-size: clamp(26px, 3.6vw, 44px);
+}
+
+/* card 01's plate (scene): BIG formal portrait in the work section's left
+   column, across the line from the cards — the zone the old anchor sat in,
+   now used at full size. Safe because visibility is TIED TO CARD 01
+   (renderScene: ringIn fade in x fade out as u leaves 0): while card 01 is
+   front, NO card has departed yet, so the lower-left is empty — the first
+   departure is card 01 itself, and the plate is gone before its arc
+   reaches this zone. During its window the left column holds only the #tl
+   heading (top; the plate hangs below it) — the horizontal ink line runs
+   RIGHTWARD from the center elbow, so nothing crosses back here.
+   COLLISION-SWEPT t=44..58 jointly with the opacity envelope at 1536x791 /
+   1536x735 / 1280x720: 0 visible intersections with cards, #tl, or #guy.
+   Re-run the sweep if RADIUS/SPACING/ringX, the envelope, or this block
+   changes. */
+html.scene #work-photo {
+  position: fixed;
+  z-index: 2;                            /* over the GL line, under cards */
+  left: 6vw;
+  top: calc(10vh + 110px);
+  margin: 0;
+  padding: 0;
+  max-width: none;
+  opacity: 0;                            /* renderScene drives it (u/ringIn) */
+  pointer-events: none;
+}
+
+html.scene #work-photo img {
+  width: auto;
+  height: min(calc(78vh - 150px), 470px);
+}
+
+/* ---- the "Also" ledger DWELL (scene) ----
+   The dolly parks mid-travel (S.travel held at 0.45) and the ledger rises
+   around the STOPPED ink line as a HORIZONTAL TIMELINE: the line runs
+   through the section, entries alternate above/below it on node dots, the
+   heading tops the section, and little Bryan idles standing on the line
+   (guy choreography, script.js). The 'also' timeline label gives the snap
+   a rest here, so the page holds still to be read. renderScene drives
+   opacity/translate off S.alsoIn. Geometry: the dolly ground line sits at
+   ~49.7vh (empirical, 735 and 791 viewports). */
+html.scene #also {
+  position: fixed;
+  inset: 0;
+  z-index: 5;                           /* over the line, under little Bryan (8) */
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  opacity: 0;                           /* renderScene drives it (alsoIn) */
+  pointer-events: none;
+}
+
+/* hide the flow spine line + eyebrow; the rows' ::before is REUSED below
+   as the timeline stem (so it must stay displayed) */
+html.scene #also::before,
+html.scene #also .also-eyebrow { display: none; }
+
+/* the heading holds the top-RIGHT corner (the top band belongs to the
+   above-line plates now) */
+html.scene #also .also-head {
+  position: absolute;
+  right: 4vw;
+  top: 74px;
+  text-align: right;
+  font-size: clamp(24px, 2.3vw, 32px);
+  margin: 0;
+}
+
+html.scene #also .also-list { margin: 0; }
+
+/* A LITERAL TIMELINE, at full typographic scale: the parked ink line
+   (~49.7vh) runs through the section; the four entries alternate sides —
+   06 above, 07 below, 08 above, 09 below — each attached to the line by
+   a node dot + stem, staggered so the dots pace evenly. Little Bryan
+   idles standing on the line at ~34vw, in the gap between the two
+   above-line entries. Photos are natural-aspect portraits sized to fill
+   their half-stage (height-capped against the nav above / viewport
+   bottom below); titles carry Fraunces at near-card scale. */
+html.scene #also .also-row {
+  position: absolute;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto 1fr;
+  gap: 4px 20px;
+  padding: 0;
+  border-top: none;
+}
+
+/* staggered slots: wide entries, dots at ~16.5 / 39 / 59 / 83vw */
+html.scene #also .also-row:nth-child(1) { left: 3vw; width: 27vw; }
+html.scene #also .also-row:nth-child(2) { left: 21vw; width: 36vw; }
+html.scene #also .also-row:nth-child(3) { left: 43vw; width: 32vw; }
+html.scene #also .also-row:nth-child(4) { left: 70vw; width: 26vw; }
+
+/* above the line: pinned up from it; below: pinned down from it */
+html.scene #also .also-row:nth-child(odd) { bottom: calc(50.3vh + 36px); }
+html.scene #also .also-row:nth-child(even) { top: calc(49.7vh + 36px); }
+
+/* the node dot, centered ON the line, and the stem attaching the entry
+   (the flow spine-dot styling on ::before is fully overridden here) */
+html.scene #also .also-row::before {
+  content: "";
+  position: absolute;
+  left: calc(50% - 1px);
+  width: 2px;
+  height: 36px;
+  background: var(--ink);
+  border: none;
+  border-radius: 0;
+}
+html.scene #also .also-row::after {
+  content: "";
+  position: absolute;
+  left: calc(50% - 8px);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--pop);
+  border: 2px solid var(--ink);
+  transition: transform .34s cubic-bezier(.34, 1.56, .64, 1);   /* pop w/ overshoot */
+}
+html.scene #also .also-row:nth-child(odd)::before { top: auto; bottom: -36px; }
+html.scene #also .also-row:nth-child(odd)::after { top: auto; bottom: -44px; }
+html.scene #also .also-row:nth-child(even)::before { top: -36px; bottom: auto; }
+html.scene #also .also-row:nth-child(even)::after { top: -44px; bottom: auto; }
+
+/* micro-moment: the entry little Bryan is standing on ENLARGES — its
+   photo + title scale up (transform only, so neighbours never reflow),
+   its node dot pops, and its number warms from deep to bright green.
+   Toggled by JS (.is-active, set from scroll position with a dwell
+   threshold) so it reverses on scroll-up without jitter; scene-only, so
+   reduced motion keeps everything at base scale. Photos scale TOWARD the
+   line (origin pinned on the nav-/viewport-edge side) so the risky screen
+   edges stay put and nothing clips. Gentle overshoot on arrival. */
+html.scene #also .also-row.is-active::after { transform: scale(1.55); }
+html.scene #also .also-row .also-no { transition: color .34s ease; }
+html.scene #also .also-row.is-active .also-no { color: var(--pop); }
+
+/* scale the whole figure (plate + caption together, so the plate never
+   overlaps its own caption); odd entries grow down from a pinned top,
+   even entries grow up from a pinned bottom — i.e. toward the line, away
+   from the nav / viewport edges. */
+html.scene #also .also-fig,
+html.scene #also .also-txt h3 {
+  transition: transform .4s cubic-bezier(.34, 1.5, .58, 1);   /* gentle overshoot */
+}
+html.scene #also .also-txt h3 { transform-origin: left center; }
+html.scene #also .also-row:nth-child(odd) .also-fig { transform-origin: center top; }
+html.scene #also .also-row:nth-child(even) .also-fig { transform-origin: center bottom; }
+html.scene #also .also-row.is-active .also-fig { transform: scale(1.09); }
+html.scene #also .also-row.is-active .also-txt h3 { transform: scale(1.07); }
+
+/* entry innards: big portrait plate left, number/title/copy right */
+html.scene #also .also-fig {
+  grid-column: 1;
+  grid-row: 1 / -1;
+  width: auto;
+  align-self: start;
+}
+html.scene #also .also-fig img {
+  width: auto;
+  height: auto;
+  max-width: 15vw;
+}
+/* above-line plates stop short of the nav; below-line plates of the
+   viewport bottom (the below pair runs a touch larger — the alternation
+   reads dynamic, not uneven) */
+html.scene #also .also-row:nth-child(odd) .also-fig img {
+  max-height: min(calc(49.7vh - 158px), 300px);   /* clears the nav w/ margin */
+}
+html.scene #also .also-row:nth-child(even) .also-fig img {
+  max-height: min(calc(50.3vh - 124px), 320px);
+}
+html.scene #also .also-fig figcaption {
+  margin-top: 7px;
+  max-width: 15vw;
+}
+/* all entries read left-aligned in the timeline (the flow layout's
+   mirrored right-alignment does not apply here) */
+html.scene #also .also-row:nth-child(n) .also-no {
+  grid-column: 2;
+  grid-row: 1;
+  font-size: clamp(20px, 1.85vw, 27px);
+  text-align: left;
+}
+html.scene #also .also-row:nth-child(n) .also-txt {
+  grid-column: 2;
+  grid-row: 2;
+  text-align: left;
+}
+html.scene #also .also-row:nth-child(n) .also-txt p { margin-left: 0; }
+html.scene #also .also-txt h3 {
+  font-size: clamp(23px, 2.2vw, 31px);
+  line-height: 1.08;
+}
+html.scene #also .also-txt p {
+  font-size: 14px;
+  line-height: 1.6;
+  margin-top: 7px;
+  max-width: 34ch;
 }
 
 html.scene #year {
@@ -1015,12 +1470,46 @@ html.scene #guy {
 /* ---------- 12. Flow-mode small screens ---------- */
 
 @media (max-width: 759px) {
-  #story, #work { padding-left: calc(4vw + 34px); }
-  #story::before, #work::before { left: calc(4vw + 8px); }
+  #story, #work, #also { padding-left: calc(4vw + 34px); }
+  #story::before, #work::before, #also::before { left: calc(4vw + 8px); }
   .station .dot { left: -31px; }
   #ring .card::before { left: -33px; }
   .card { padding: 22px 20px 20px; }
   .contact-meta { text-align: left; }
   .stats { gap: 24px; flex-wrap: wrap; }
   .foot-left { max-width: 100%; }
+
+  /* station photo cluster: full column width, desk snapshots still overlap */
+  .st-photos { max-width: none; margin-bottom: 84px; }
+
+
+  /* ledger rows stack: number + title, description, then the photo inline
+     (lazy-loaded via loading="lazy" + srcset on each <img>). nth-child(n)
+     keeps specificity level with the desktop alternating rules. */
+  .also-row:nth-child(n) {
+    grid-template-columns: auto 1fr;
+    gap: 4px 14px;
+    align-items: start;
+    padding: 22px 0;
+  }
+  .also-row::before { left: -33px; }
+  .also-row:nth-child(n) .also-no {
+    grid-column: 1;
+    grid-row: 1;
+    text-align: left;
+    align-self: start;
+  }
+  .also-row:nth-child(n) .also-txt {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: left;
+    align-self: start;
+  }
+  .also-row:nth-child(n) .also-txt p { margin-left: 0; }
+  .also-row:nth-child(n) .also-fig {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    width: min(240px, 70vw);
+    margin-top: 14px;
+  }
 }

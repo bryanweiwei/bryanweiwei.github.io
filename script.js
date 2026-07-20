@@ -29,9 +29,28 @@
   var vline = $('#vline'), hline = $('#hline'), node = $('#node'),
       hero = $('.hero'), tl = $('#tl'), yearEl = $('#year'),
       end = $('#contact'), prog = $('#progress'), guy = $('#guy'),
-      ring = $('#ring'), waveAnchor = $('#wave-anchor');
+      ring = $('#ring'), waveAnchor = $('#wave-anchor'),
+      workPhoto = $('#work-photo'), also = $('#also');
   var stations = [].slice.call(document.querySelectorAll('.station'));
   var cards = [].slice.call(document.querySelectorAll('#ring .card'));
+  var alsoRows = also ? [].slice.call(also.querySelectorAll('.also-row')) : [];
+
+  /* the ledger node centers as guy-space X (origin = screen center):
+     fractions mirror the .also-row nth-child slot centers in style.css
+     (left + width/2), so little Bryan lands exactly on each node dot */
+  var ALSO_NODES = [0.165, 0.39, 0.59, 0.83];
+  function alsoNodeGX(i) { return vw * (ALSO_NODES[i] - 0.5); }
+
+  /* highlight the active ledger entry (pop the node + warm its number);
+     idx<0 clears. Only touches the DOM on change, so it's scrub-cheap
+     and reverses cleanly on scroll-up. */
+  var activeAlso = -1;
+  function setActiveAlso(idx) {
+    if (idx === activeAlso) return;
+    if (activeAlso >= 0 && alsoRows[activeAlso]) alsoRows[activeAlso].classList.remove('is-active');
+    if (idx >= 0 && alsoRows[idx]) alsoRows[idx].classList.add('is-active');
+    activeAlso = idx;
+  }
 
   var YEARS = ['2025', '2025', '2026', '2026', '2026'];
   var N = cards.length, STEP = 360 / N, RADIUS = 340, SPACING = 600;
@@ -690,6 +709,27 @@
     yearEl.textContent = YEARS[front];
     yearEl.style.opacity = S.ringIn > 0.25 ? 0.9 : 0;
 
+    /* card 01's left-column plate: in with the ring (steep ringIn fade),
+       OUT as the revolve leaves card 01 — gone by u=0.4, well before the
+       departing card's arc reaches its zone (collision-swept, see the
+       html.scene #work-photo block in style.css). Scrub-symmetric. */
+    if (workPhoto) {
+      var wIn = Math.max(0, Math.min(1, (S.ringIn - 0.5) * 2));
+      var wOut = Math.max(0, Math.min(1, 1 - (S.u - 0.02) / 0.28));
+      workPhoto.style.opacity = (wIn * wOut).toFixed(3);
+    }
+
+    /* the "Also" ledger dwell: S.alsoIn (tweened on the master timeline,
+       with a held plateau and its own snap label) drives the panel — the
+       camera is parked mid-dolly, the panel rises around the stopped
+       line, and little Bryan idles on it (see the guy choreography). */
+    if (also) {
+      var ai = S.alsoIn || 0;
+      also.style.opacity = ai.toFixed(3);
+      also.style.transform = 'translateY(' + (18 * (1 - ai)).toFixed(1) + 'px)';
+      if (ai <= 0.01) setActiveAlso(-1);   /* no highlight while hidden */
+    }
+
     /* soft shadow the front card casts on the paper behind it */
     var bestFace = (function () {
       var a = ((front * STEP - u * STEP) % 360 + 360) % 360;
@@ -716,14 +756,19 @@
     var MAGc = 1300 / (1300 - RADIUS);
     var cardTopX = (ringX - 174) * MAGc;
     var cardTopY = -152 * MAGc + 10;
+    /* dropPx maps his feet ~22px BELOW where the GL layer actually projects
+       the descended rule, so at rest the line cut across his shins. Lift him
+       back onto it; scaled by lineDrop so it's 0 during the ledger walk (his
+       line ref is the parked ink line there) and eases in as the rule forms. */
+    var LINE_FOOT_FIX = 22;
     if (p < 80.5) revealSayHi(0);   /* the sign-off stays hidden until the run */
-    if (p >= 90.9) {
+    if (p >= 99.1) {
       /* waves standing ON the settled line, at the sign-off */
       guy.style.opacity = 1;
       var r = waveAnchor.getBoundingClientRect();
       dropPx = r.bottom + 30 - vh / 2;
       if (GL.ready) GL.dropPx = dropPx;
-      var wy = dropPx;
+      var wy = dropPx - LINE_FOOT_FIX;   /* stand ON the rule, not through it */
       guy.style.transform =
         'translate(' + (r.left - vw / 2 + 34) + 'px,' + wy + 'px)';
       gctx.mode = 'wave';
@@ -754,25 +799,70 @@
         CHAR.prevDropT = d;
         gctx.mode = 'jump';
         gctx.frac = Math.max(0.03, Math.min(0.97, d));
-      } else if (p < 88.2) {
-        /* the traveling run: eases into frame-left, world streams by */
-        var fT = smooth((p - 81.6) / 1.6);
-        gx2 = (cardTopX + 26) + (holdX - cardTopX - 26) * fT;
+      } else if (p >= 84.6 && p < 93.0) {
+        /* THE LEDGER DWELL: the camera is parked and the "Also" timeline
+           is up around the line. As you scroll, little Bryan walks the
+           line — resting on a node, then hopping to the next — and the
+           node he's on is the "active" entry (its dot pops, its number
+           warms green, see .also-row.is-active in style.css). It's a pure
+           function of scroll, so it reverses on scroll-up; and it only
+           lives in scene mode, so reduced-motion never sees it. */
+        var last = ALSO_NODES.length - 1;              /* 3 */
+        /* Walk across ONLY the fully-visible plateau, not the whole dwell:
+           finish on node 09 by ~91.2 (the panel fades from 92.2), then he
+           rests there while it's still up. Mapping the walk across the
+           entire 84.6..93.0 made him land on 09 exactly as the panel left,
+           so 09 never got a readable beat. Clamped, so he rests on 06
+           before the walk and on 09 after it. */
+        var w = Math.max(0, Math.min(1, (p - 85.2) / (91.2 - 85.2)));
+        var segF = w * last;                           /* 0..3, one unit per leg */
+        var si = Math.max(0, Math.min(last - 1, Math.floor(segF)));
+        var sf = Math.max(0, Math.min(1, segF - si));  /* progress within this leg */
+        var hopT = sf <= 0.6 ? 0 : (sf - 0.6) / 0.4;   /* rest ~60%, then hop */
+        gx2 = alsoNodeGX(si) + (alsoNodeGX(si + 1) - alsoNodeGX(si)) * smooth(hopT);
+        gy2 = lineY - hopArc(hopT) * 30;
+        if (hopT > 0 && hopT < 1) {
+          gctx.mode = 'jump';
+          gctx.frac = Math.max(0.03, Math.min(0.97, hopT));
+        } else {
+          gctx.mode = 'idle';                          /* idle fidget at each node */
+          gctx.frac = 0;
+        }
+        CHAR.prevDropT = 0;
+        /* Which entry is "active" — with a dwell threshold so the emphasis
+           only moves when he's actually resting on / landing on a node,
+           never mid-hop. Hysteresis (settle at sf<=0.6, arrive at sf>=0.9;
+           hold between) kills scale-jitter and still reverses cleanly. */
+        if (sf <= 0.6) setActiveAlso(si);
+        else if (sf >= 0.9) setActiveAlso(si + 1);
+      } else if (p < 96.4) {
+        /* the traveling run: pre-dwell he eases off the card onto the
+           first ledger node; post-dwell he slides off the last node back
+           to frame-left and holds there as the world streams past */
+        if (p >= 93.0) {
+          var lastX = alsoNodeGX(ALSO_NODES.length - 1);
+          var backT = smooth(Math.min(1, (p - 93.0) / 1.3));
+          gx2 = lastX + (holdX - lastX) * backT;
+        } else {
+          var fT = smooth((p - 81.6) / (84.6 - 81.6));
+          gx2 = (cardTopX + 26) + (alsoNodeGX(0) - cardTopX - 26) * fT;
+        }
         gy2 = lineY;
         gctx.mode = 'run';
         gctx.runX = travelPx2 + gx2;   /* ground-relative: legs churn with the dolly */
         CHAR.prevDropT = 0;
-      } else if (p < 89.3) {
+        setActiveAlso(-1);
+      } else if (p < 97.5) {
         /* arrival: runs the last stretch, drawing in "Say hi." as he goes */
-        var rT = smooth((p - 88.2) / 1.1);
+        var rT = smooth((p - 96.4) / 1.1);
         gx2 = holdX + (takeoffX - holdX) * rT;
         gy2 = lineY;
         gctx.mode = 'run';
         gctx.runX = travelPx2 + gx2;
-      } else if (p < 90.5) {
+      } else if (p < 98.7) {
         /* the flourish: springs up, a full forward flip, lands on the
            period at the sign-off — a pure function of progress, scrub-safe */
-        var fF = (p - 89.3) / 1.2;
+        var fF = (p - 97.5) / 1.2;
         var eF = smooth(fF);
         gx2 = takeoffX + (tx - takeoffX) * eF;
         gy2 = lineY - Math.sin(Math.PI * fF) * 82;
@@ -786,12 +876,13 @@
         gctx.mode = 'idle';
         gctx.frac = 0;
       }
+      gy2 -= LINE_FOOT_FIX * (S.lineDrop || 0);   /* ride the rule as it descends */
       guy.style.transform =
         'translate(' + gx2 + 'px,' + gy2 + 'px) rotate(' + flipDeg + 'deg)';
       gctx.y = gy2;
       gctx.visible = true;
       /* draw "Say hi." in left-to-right, its edge tracking his feet */
-      if (p < 88.2) {
+      if (p < 96.4) {
         revealSayHi(0);
       } else {
         var lr = sayHiLink ? sayHiLink.getBoundingClientRect() : null;
@@ -960,7 +1051,7 @@
       }
     });
 
-    S = { grow: 0, retract: 0, elbow: 0, slide: 0, u: 0, ringIn: 0, swing: 0, lineDrop: 0, travel: 0 };
+    S = { grow: 0, retract: 0, elbow: 0, slide: 0, u: 0, ringIn: 0, swing: 0, lineDrop: 0, travel: 0, alsoIn: 0 };
 
     initChar();
     guy.classList.remove('p-stand', 'p-run', 'p-leap', 'waving');
@@ -1003,11 +1094,21 @@
        projection — Lenis supplies the inertia; snap only tidies the
        landing so the page always rests composed */
     var labelRatios = [];
+    /* the "Also" ledger dwell (sections 06–09) is deliberately free-scroll:
+       little Bryan walks the line node-to-node and you rest on whatever entry
+       you stop on. There's no snap label inside it, so without this guard the
+       nearest-label snap yanks you to the closest waypoint OUTSIDE the dwell —
+       card 5 (0.786) from the top of the ledger, the finale (0.991) from the
+       bottom. That's the "land on 06, get pulled back to 05" bug. Holding
+       position inside the band keeps you on the entry you're reading. Bounds
+       mirror the dwell in renderScene (p 84.6–93.0; timeline padded to 100u). */
+    var DWELL_LO = 0.846, DWELL_HI = 0.930;
     function nearestLabel(value, self) {
       /* ST hands us a velocity-projected value; a hard flick projects
          to the extremes. Snap from ACTUAL progress instead — Lenis
          supplies the inertia, snap only tidies the landing. */
       var from = self ? self.progress : value;
+      if (from >= DWELL_LO && from < DWELL_HI) return from;   /* free-scroll: don't pull off the ledger */
       var best = 0, bd = 2;
       for (var i = 0; i < labelRatios.length; i++) {
         var d = Math.abs(labelRatios[i] - from);
@@ -1092,26 +1193,40 @@
     master.to(S, { ringIn: 0, duration: 2.5, ease: 'power1.in' }, 80.5);
     master.to(tl, { opacity: 0, duration: 2, ease: 'power1.in' }, 80.5);
 
-    /* THE DOLLY: the perspective moves horizontally onward along the
-       line, out of the work and into the end page */
-    master.to(S, { travel: 1, duration: 6, ease: 'power2.inOut' }, 81.6);
+    /* THE DOLLY, part one: the camera travels along the line and
+       DECELERATES INTO THE LEDGER — a station stop halfway to the end */
+    master.to(S, { travel: 0.45, duration: 3, ease: 'power2.inOut' }, 81.6);
+
+    /* THE "ALSO" LEDGER DWELL: the panel fades up around the line while
+       the camera is stopped and HOLDS from 85.0 to 92.2 — 7.2 units,
+       roughly 60vh of runway scroll where the page is simply PARKED on
+       the timeline, readable at leisure. NO snap label here on purpose:
+       the section stays free-scroll (no rest basin pulling you in), and
+       little Bryan walks the line node-to-node as you scroll (see the
+       ledger dwell in renderScene), the line doubling as the ledger's
+       timeline. */
+    master.to(S, { alsoIn: 1, duration: 1.4, ease: 'power2.out' }, 83.6);
+    master.to(S, { alsoIn: 0, duration: 1.2, ease: 'power2.in' }, 92.2);
+
+    /* THE DOLLY, part two: onward into the end page */
+    master.to(S, { travel: 1, duration: 2.8, ease: 'power2.inOut' }, 93.0);
 
     /* FINALE — it arrives with the camera: slides in from the right
        as the dolly decelerates, like pulling into a station */
     gsap.set(end, { opacity: 0 });
     master.fromTo(end, { opacity: 0, x: '38vw' },
-      { opacity: 1, x: '0vw', duration: 3, ease: 'power3.out' }, 87.2);
+      { opacity: 1, x: '0vw', duration: 3, ease: 'power3.out' }, 95.4);
     master.from(wordSplits.end, {
       yPercent: 60, opacity: 0, duration: 2.6,
       ease: 'power3.out', stagger: 0.07
-    }, 88.2);
+    }, 96.4);
 
     /* the line doesn't leave: it eases down and settles as the
        broadsheet rule under the sign-off, part of the final page */
-    master.to(S, { lineDrop: 1, duration: 1.8, ease: 'power2.inOut' }, 88.4);
+    master.to(S, { lineDrop: 1, duration: 1.8, ease: 'power2.inOut' }, 96.6);
 
     /* the composed end-page rest point */
-    master.addLabel('home', 90.9);
+    master.addLabel('home', 99.1);
 
     /* pad the tail so the timeline is exactly 100 units — a calm hold
        after the finale, and unit thresholds stay honest */
@@ -1227,9 +1342,9 @@
       }
     }
     if (sayHiLink) { sayHiLink.style.clipPath = ''; if (CHAR.ready) CHAR.lastClip = -1; }
-    [vline, hline, node, ring, yearEl, guy].concat(cards).forEach(function (el) {
-      el.removeAttribute('style');
-    });
+    [vline, hline, node, ring, yearEl, guy]
+      .concat(cards, workPhoto ? [workPhoto] : [], also ? [also] : [])
+      .forEach(function (el) { el.removeAttribute('style'); });
     guy.classList.remove('p-stand', 'p-run', 'p-leap', 'waving');
     lastPose = '';
     end.classList.remove('live');
