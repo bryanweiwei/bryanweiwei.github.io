@@ -1854,5 +1854,8 @@
   document.getElementById('palette-backdrop')
     .addEventListener('click', closePal);
 
+  var closeBtn = document.getElementById('palette-close');
+  if (closeBtn) closeBtn.addEventListener('click', closePal);
+
   if (btn) btn.addEventListener('click', openPal);
 })();

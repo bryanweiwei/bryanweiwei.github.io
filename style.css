@@ -1398,6 +1398,22 @@ html.scene #guy {
   box-shadow: 10px 10px 0 rgba(14, 22, 17, 0.18);
 }
 
+#palette-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 10px 13px;
+  background: none;
+  border: none;
+  color: var(--soft);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 1;
+}
+#palette-close:hover { color: var(--ink); }
+#palette-close:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+
 #palette-input {
   width: 100%;
   border: none;
