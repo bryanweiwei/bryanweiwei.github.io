@@ -886,9 +886,9 @@ html.scene:not(.gsap-ready) .hero-proof {
   animation: heroSupportIn 0.5s ease forwards;
 }
 /* delays mirror the tightened GSAP cascade, anchored after the name's
-   1.2s failsafe rise: sub +0.45, proof +0.85 (see heroEntrance). */
-html.scene:not(.gsap-ready) .hero-sub  { animation-delay: 1.65s; }
-html.scene:not(.gsap-ready) .hero-proof { animation-delay: 2.05s; }
+   1.2s failsafe rise: sub +0.34, proof +0.64 (see heroEntrance). */
+html.scene:not(.gsap-ready) .hero-sub  { animation-delay: 1.54s; }
+html.scene:not(.gsap-ready) .hero-proof { animation-delay: 1.84s; }
 
 /* split units (created by JS in scene mode) */
 .ch, .w { display: inline-block; will-change: transform; }

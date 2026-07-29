@@ -1283,13 +1283,13 @@
     /* 2 — sub-headline rises in word by word, over the tail of the name */
     tl.to(heroSubWords,
       { yPercent: 0, opacity: 1, duration: 0.7, ease: 'power3.out', stagger: 0.06 },
-      0.45);
+      0.34);
 
     /* 3 — proof line fades up, over the tail of the sub-headline */
     gsap.set(proof, { y: 12 });
     tl.to(proof,
       { y: 0, opacity: 1, duration: 0.55, ease: 'power2.out' },
-      0.85);
+      0.64);
 
     /* 4 — scroll hint appears after 4 s of idle (see hintIdleStart below) */
     hintIdleStart(hint);
