@@ -1531,6 +1531,15 @@
   window.__bw = {
     setMode: setMode,
     inScene: inScene,
+    pauseScroll:  function () { if (lenis) lenis.stop(); },
+    resumeScroll: function () { if (lenis) lenis.start(); },
+    hintPause: function () { hintIdleCleanup(); },
+    hintResume: function () {
+      var h = hero && hero.querySelector('.hint');
+      if (h && !h.classList.contains('hint-idle') && !h.classList.contains('hint-gone')) {
+        hintIdleStart(h);
+      }
+    },
     /* programmatic scrolling must go through Lenis in scene mode
        (native scrollTo bypasses it and the two would fight) */
     scrollToPos: function (pos, opts) {
@@ -1749,7 +1758,7 @@
     ];
   }
 
-  var current = [], sel = 0, lastFocus = null;
+  var current = [], sel = 0, lastFocus = null, palWheelBlock = null;
 
   function renderList() {
     var q = input.value.trim().toLowerCase();
@@ -1764,6 +1773,11 @@
     }).join('');
   }
 
+  function scrollSelIntoView() {
+    var li = listEl.querySelector('li.sel');
+    if (li) li.scrollIntoView({ block: 'nearest' });
+  }
+
   function openPal() {
     lastFocus = document.activeElement;
     palette.hidden = false;
@@ -1771,11 +1785,34 @@
     sel = 0;
     renderList();
     input.focus();
+    /* pause the page scroll engine and suppress the idle hint while open */
+    if (window.__bw) { window.__bw.pauseScroll(); window.__bw.hintPause(); }
+    /* capture-phase wheel handler: fires before Lenis's bubble listener so
+       stopPropagation prevents Lenis from calling preventDefault and stealing
+       the event. We manually apply deltaY to the list when the pointer is
+       over it; otherwise we absorb the event to keep the page still. */
+    palWheelBlock = function (e) {
+      if (listEl.contains(e.target)) {
+        var delta = e.deltaMode === 1 ? e.deltaY * 20
+                  : e.deltaMode === 2 ? e.deltaY * listEl.clientHeight
+                  : e.deltaY;
+        listEl.scrollTop += delta;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    window.addEventListener('wheel', palWheelBlock, { passive: false, capture: true });
   }
 
   function closePal() {
     palette.hidden = true;
     if (lastFocus && lastFocus.focus) lastFocus.focus();
+    /* resume page scroll and idle-hint timer */
+    if (window.__bw) { window.__bw.resumeScroll(); window.__bw.hintResume(); }
+    if (palWheelBlock) {
+      window.removeEventListener('wheel', palWheelBlock, { capture: true });
+      palWheelBlock = null;
+    }
   }
 
   function runSel() {
@@ -1793,8 +1830,8 @@
     }
     if (palette.hidden) return;
     if (e.key === 'Escape') { e.preventDefault(); closePal(); }
-    else if (e.key === 'ArrowDown') { e.preventDefault(); sel = Math.min(sel + 1, current.length - 1); renderList(); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); sel = Math.max(sel - 1, 0); renderList(); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); sel = Math.min(sel + 1, current.length - 1); renderList(); scrollSelIntoView(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); sel = Math.max(sel - 1, 0); renderList(); scrollSelIntoView(); }
     else if (e.key === 'Enter') { e.preventDefault(); runSel(); }
   });
 
