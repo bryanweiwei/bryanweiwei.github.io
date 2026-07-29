@@ -847,6 +847,40 @@ html.scene .hero {
     var(--paper) 0%, var(--paper) 70%, transparent 84%);
 }
 
+/* hero knockdown snapshots (scene mode only; JS builds and removes them).
+   Casual scattered prints in the hero whitespace — paper border, slight
+   tilt, subtle idle sway — until little Bryan's landing shakes them loose
+   and they tumble off the bottom (see knockdown in script.js). They're
+   the SAME photos found later at station ii and the ledger. Decorative:
+   aria-hidden, absolute in the fixed hero, zero CLS. Reduced motion and
+   flow mode never build them. */
+#knock {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* the fixed hero is a stacking context, so -1 paints the shots ABOVE
+     its paper gradient but BELOW its (static) copy — the name always
+     wins if a snapshot ever drifts under it at narrow scene widths */
+  z-index: -1;
+}
+.knock-shot {
+  position: absolute;
+  background: var(--paper);
+  padding: 5px 5px 15px;
+  border: 1px solid rgba(14, 22, 17, 0.16);
+  box-shadow: 4px 6px 0 rgba(14, 22, 17, 0.07);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.knock-shot img { display: block; width: 100%; height: auto; filter: saturate(0.94); }
+/* very subtle idle sway on an INNER wrapper, so the CSS animation never
+   fights GSAP's transform on the outer (tilt + the fall tween) */
+.knock-shot .ks-in { animation: ksSway 5.5s ease-in-out infinite alternate; }
+@keyframes ksSway {
+  from { transform: rotate(-0.5deg); }
+  to   { transform: rotate(0.5deg); }
+}
+
 /* scroll hint: hidden on load; fades in after 4 s of idle (JS adds
    .hint-idle), then fades out permanently on first scroll (.hint-gone).
    Failsafe: with no gsap-ready, it appears after a CSS delay so a slow

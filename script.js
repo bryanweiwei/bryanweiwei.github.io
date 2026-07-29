@@ -447,6 +447,16 @@
   var hintIdleTimer = null;
   var hintScrollKill = null;
 
+  /* ---------- hero knockdown: little Bryan knocks the photos down ----
+     Scene-mode-only load beat, layered over the hero entrance: scattered
+     snapshots sit quietly in the hero whitespace; after the line draws,
+     he drops in, lands with a thud (screen tremble), and the snapshots
+     break loose and tumble off the bottom. The photos are the SAME
+     images found later at station ii and the ledger — no copy says so.
+     hold: keeps him visible standing by the line at rest (renderScene
+     honors it below p≈1.4, one-shot). done: sequence finished/aborted. */
+  var KNOCK = { tl: null, box: null, shots: [], hold: false, done: true };
+
   function glPx2World() {
     /* camera z=10, fov 40: world units per CSS pixel */
     return (2 * 10 * Math.tan(20 * Math.PI / 180)) / vh;
@@ -672,6 +682,9 @@
        thresholds below are authored in these units */
     var p = master ? master.time() : 0;
     prog.style.width = (master ? master.progress() * 100 : 0) + '%';
+
+    /* a real scroll mid-knockdown resolves it instantly and cleanly */
+    if (!KNOCK.done && p > 0.35) knockFinish();
 
     /* lines (DOM fallback path; GL owns them when html.scene.gl) */
     var lx = -S.slide * 38;
@@ -991,6 +1004,14 @@
       gctx.frac = frac;
       gctx.y = -hop;
       gctx.visible = gop > 0.05;
+    } else if (KNOCK.hold) {
+      /* post-knockdown rest: he stands at the line until the scroll takes
+         over, fading with the hero lift — a one-shot; once gone, the top
+         of the page is exactly today's clean state */
+      var ko = Math.max(0, 1 - p / 1.4);
+      guy.style.opacity = ko.toFixed(3);
+      gctx.visible = ko > 0.05;
+      if (!gctx.visible) { KNOCK.hold = false; gctx.mode = 'hidden'; }
     } else {
       guy.style.opacity = 0;
       gctx.mode = 'hidden';
@@ -1299,6 +1320,151 @@
     tl.to(S, {
       grow: 1, duration: 1.1, ease: 'power2.inOut', onUpdate: renderScene
     }, 1.2);
+
+    /* 6 — the knockdown rides alongside on its own timeline (aligned to
+       the same 0.15 delay); the entrance above never waits for it */
+    knockBuild();
+  }
+
+  /* the snapshots: existing station-ii / ledger derivatives, reused as-is
+     (already cached-or-cheap; the page loads them again further down).
+     Positions flank the centered hero copy and the center line. */
+  var KNOCK_SHOTS = [
+    { src: 'photo-presenting.jpg', pos: 'left:5vw;top:14vh',   w: 150, r: -5 },
+    { src: 'photo-msft.jpg',       pos: 'right:5vw;top:16vh',  w: 140, r: 4 },
+    { src: 'photo-bte-group.jpg',  pos: 'left:12vw;top:47vh',  w: 120, r: 3.5 },
+    { src: 'photo-fab.jpg',        pos: 'right:11vw;top:45vh', w: 130, r: -3 },
+    { src: 'photo-hackathon.jpg',  pos: 'left:23vw;top:70vh',  w: 118, r: 2.5 },
+    { src: 'photo-pdce.jpg',       pos: 'right:22vw;top:68vh', w: 112, r: -4.5 }
+  ];
+
+  function knockBuild() {
+    knockTeardown();   /* mode re-entry: never stack two runs */
+
+    var box = document.createElement('div');
+    box.id = 'knock';
+    box.setAttribute('aria-hidden', 'true');
+    KNOCK.shots = KNOCK_SHOTS.map(function (s, i) {
+      var el = document.createElement('div');
+      el.className = 'knock-shot';
+      el.style.cssText = s.pos + ';width:' + s.w + 'px';
+      var inWrap = document.createElement('div');
+      inWrap.className = 'ks-in';
+      /* desync the sways so they don't breathe in unison */
+      inWrap.style.animationDuration = (4.6 + i * 0.7) + 's';
+      inWrap.style.animationDelay = (-i * 1.3) + 's';
+      var img = document.createElement('img');
+      img.src = 'images/' + s.src;
+      img.alt = '';
+      img.decoding = 'async';
+      inWrap.appendChild(img);
+      el.appendChild(inWrap);
+      box.appendChild(el);
+      gsap.set(el, { rotation: s.r });   /* GSAP owns the outer transform */
+      return el;
+    });
+    hero.insertBefore(box, hero.firstChild);   /* under the hero copy */
+    KNOCK.box = box;
+    KNOCK.done = false;
+    KNOCK.hold = false;
+
+    var scn = document.getElementById('scene');
+    var tl = gsap.timeline({ delay: 0.15 });
+    KNOCK.tl = tl;
+
+    /* snapshots fade in quietly with the entrance — present by ~1.3s,
+       never in front of the name (they're behind the copy in the DOM) */
+    tl.to(KNOCK.shots, { opacity: 1, duration: 0.55, ease: 'power1.out', stagger: 0.07 }, 0.7);
+
+    /* THE DROP — he falls in from above the viewport, straight past the
+       name, and lands ON the visible stretch of the ink line below the
+       copy (the hero's paper gradient goes transparent from ~75vh, so
+       the line reads there). Landing dead-center (his scroll anchor) put
+       him on the sub-headline — no continuity cost to landing lower: he
+       fades out here on first scroll and re-enters at the elbow as usual.
+       Limbs ride jumpPose via gctx: airborne through the fall, then the
+       squash-stretch landing crouch. */
+    KNOCK.restY = Math.round(vh * 0.28);   /* feet ≈ 78vh, on the line */
+    var d = { y: -(vh / 2 + 110) };
+    tl.to(d, {
+      y: KNOCK.restY, duration: 0.5, ease: 'power2.in',
+      onStart: function () {
+        KNOCK.hold = true;              /* renderScene keeps him visible */
+        guy.style.opacity = 1;
+        gctx.mode = 'jump';
+        gctx.visible = true;
+      },
+      onUpdate: function () {
+        guy.style.transform = 'translate(0px,' + d.y.toFixed(1) + 'px)';
+        gctx.y = d.y;                   /* scarf spring feels the fall */
+        gctx.frac = 0.45 + 0.41 * this.progress();   /* air pose, tucking */
+      }
+    }, 1.6);
+
+    /* THE LANDING — impact: dust, crouch-to-stand recovery, tremble */
+    var land = { f: 0.86 };
+    tl.to(land, {
+      f: 1, duration: 0.3, ease: 'power2.out',
+      onStart: fireDust,
+      onUpdate: function () { gctx.frac = land.f; },
+      onComplete: function () { gctx.mode = 'idle'; gctx.frac = 0; }
+    }, 2.1);
+
+    /* screen tremble: ~350ms of decaying jitter on the hero + the scene
+       layer (line, GL). Nav, progress bar and little Bryan sit outside
+       both, so nothing chrome-level moves. Ends exactly at 0,0. */
+    var tr = { t: 0 };
+    tl.to(tr, {
+      t: 1, duration: 0.35, ease: 'none',
+      onUpdate: function () {
+        var k = (1 - tr.t) * (1 - tr.t);   /* fast decay, playful not woozy */
+        gsap.set([hero, scn], {
+          x: Math.sin(tr.t * 43) * 5 * k,
+          y: Math.cos(tr.t * 31) * 3.5 * k
+        });
+      }
+    }, 2.1);
+
+    /* the snapshots shake loose: staggered starts, gravity-ish
+       acceleration, each with its own tumble — all clear by ~3.3s */
+    KNOCK.shots.forEach(function (el, i) {
+      tl.to(el, {
+        y: '+=' + (vh + 300),
+        x: '+=' + ((i % 2 ? 1 : -1) * (26 + (i * 29) % 48)),
+        rotation: '+=' + ((i % 2 ? 1 : -1) * (80 + (i * 53) % 75)),
+        duration: 0.72 + ((i * 47) % 5) * 0.055,
+        ease: 'power2.in'
+      }, 2.16 + i * 0.075);
+    });
+
+    tl.call(function () { knockFinish(); });
+  }
+
+  /* normal end OR scroll interrupt: photos gone, transforms zeroed,
+     little Bryan standing at his line anchor — no half-fallen states */
+  function knockFinish() {
+    if (KNOCK.done) return;
+    KNOCK.done = true;
+    if (KNOCK.tl) { KNOCK.tl.kill(); KNOCK.tl = null; }
+    if (KNOCK.box) KNOCK.box.style.display = 'none';
+    var scn = document.getElementById('scene');
+    gsap.set([hero, scn], { x: 0, y: 0 });
+    guy.style.transform = 'translate(0px,' + (KNOCK.restY || 0) + 'px)';
+    gctx.mode = 'idle';
+    gctx.frac = 0;
+    gctx.y = KNOCK.restY || 0;
+  }
+
+  function knockTeardown() {
+    KNOCK.done = true;
+    KNOCK.hold = false;
+    if (KNOCK.tl) { KNOCK.tl.kill(); KNOCK.tl = null; }
+    if (KNOCK.box) { KNOCK.box.remove(); KNOCK.box = null; }
+    KNOCK.shots = [];
+    if (window.gsap) {
+      var scn = document.getElementById('scene');
+      if (scn) gsap.set([hero, scn], { x: 0, y: 0 });
+    }
   }
 
   function hintIdleStart(hint) {
@@ -1340,6 +1506,7 @@
 
   function killScene() {
     hintIdleCleanup();
+    knockTeardown();
     if (onSceneMouse) {
       removeEventListener('mousemove', onSceneMouse);
       onSceneMouse = null;
