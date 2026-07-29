@@ -847,14 +847,16 @@ html.scene .hero {
     var(--paper) 0%, var(--paper) 70%, transparent 84%);
 }
 
-/* scroll hint: hidden until the entrance fades it in (.hint-live starts
-   the breathing pulse). Failsafe: with no gsap-ready, it pulses on its
-   own so a slow GSAP load still shows it. */
+/* scroll hint: hidden on load; fades in after 4 s of idle (JS adds
+   .hint-idle), then fades out permanently on first scroll (.hint-gone).
+   Failsafe: with no gsap-ready, it appears after a CSS delay so a slow
+   GSAP load still shows it eventually. Reduced motion / flow: visible
+   statically (no hide rule applies outside html.scene). */
 html.scene .hero .hint { display: block; }
-/* failsafe: hidden, then appears last (mirrors the cascade, ~name+1.05s) */
-html.scene:not(.gsap-ready) .hero .hint { opacity: 0; animation: pulse 2.2s ease-in-out 2.25s infinite; }
+html.scene:not(.gsap-ready) .hero .hint { opacity: 0; animation: pulse 2.2s ease-in-out 4s infinite; }
 html.scene.gsap-ready .hero .hint { opacity: 0; }
-html.scene.gsap-ready .hero .hint.hint-live { opacity: 1; animation: pulse 2.2s ease-in-out infinite; }
+html.scene.gsap-ready .hero .hint.hint-idle { opacity: 1; transition: opacity 0.7s ease; animation: pulse 2.2s ease-in-out infinite; }
+html.scene.gsap-ready .hero .hint.hint-gone  { opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
 
 /* hero reveal is GSAP-owned in scene mode; CSS just hides the lines
    until the character stagger takes over (no flash before JS runs).

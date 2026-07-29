@@ -444,6 +444,8 @@
 
   var GL = { ready: false };
   var onSceneMouse = null;
+  var hintIdleTimer = null;
+  var hintScrollKill = null;
 
   function glPx2World() {
     /* camera z=10, fov 40: world units per CSS pixel */
@@ -1289,11 +1291,8 @@
       { y: 0, opacity: 1, duration: 0.55, ease: 'power2.out' },
       0.85);
 
-    /* 4 — scroll hint fades in, then breathes (pulse via .hint-live) */
-    tl.to(hint,
-      { opacity: 1, duration: 0.5, ease: 'power1.out',
-        onComplete: function () { hint.classList.add('hint-live'); } },
-      1.05);
+    /* 4 — scroll hint appears after 4 s of idle (see hintIdleStart below) */
+    hintIdleStart(hint);
 
     /* 5 — finale: the ink line draws down from beneath the copy to the
        bottom edge, inviting the scroll. grow holds at 1 for the descent. */
@@ -1302,7 +1301,45 @@
     }, 1.2);
   }
 
+  function hintIdleStart(hint) {
+    hintIdleCleanup();
+    var revealed = false;
+
+    function showHint() {
+      hint.classList.add('hint-idle');
+      revealed = true;
+    }
+
+    function onScroll() {
+      clearTimeout(hintIdleTimer);
+      hintIdleTimer = null;
+      if (revealed) {
+        hint.classList.add('hint-gone');
+        hintIdleCleanup();
+      } else {
+        /* reset the idle clock while still waiting */
+        hintIdleTimer = setTimeout(showHint, 4000);
+      }
+    }
+
+    hintIdleTimer = setTimeout(showHint, 4000);
+    addEventListener('scroll', onScroll, { passive: true });
+    addEventListener('wheel',  onScroll, { passive: true });
+    addEventListener('touchstart', onScroll, { passive: true });
+    hintScrollKill = function () {
+      removeEventListener('scroll', onScroll);
+      removeEventListener('wheel',  onScroll);
+      removeEventListener('touchstart', onScroll);
+    };
+  }
+
+  function hintIdleCleanup() {
+    if (hintIdleTimer) { clearTimeout(hintIdleTimer); hintIdleTimer = null; }
+    if (hintScrollKill) { hintScrollKill(); hintScrollKill = null; }
+  }
+
   function killScene() {
+    hintIdleCleanup();
     if (onSceneMouse) {
       removeEventListener('mousemove', onSceneMouse);
       onSceneMouse = null;
@@ -1349,6 +1386,8 @@
     lastPose = '';
     end.classList.remove('live');
     prog.style.width = '0';
+    var h = hero.querySelector('.hint');
+    if (h) h.classList.remove('hint-idle', 'hint-gone');
   }
 
   /* flow mode keeps only the progress hairline */
