@@ -277,8 +277,17 @@
 
   function wavePose(t) {
     lerpPose(POSES.stand, POSES.stand, 0);
-    P.armR = -118 + Math.sin(t * 8.5) * 22;         /* the wave */
-    P.foreR = -20 + Math.sin(t * 8.5 + 0.6) * 12;   /* wrist follows */
+    /* The wave swings the whole arm from the SHOULDER and keeps the
+       forearm rigid (foreR = 0). The raised upper arm (-118deg) plus an
+       INDEPENDENT forearm rotation is the one pose that stresses the
+       nested-SVG transform hard enough that some GPU compositors paint a
+       seam at the elbow — the hand looks severed (it measures a perfect
+       0px gap in the DOM, so it's a paint quirk, not geometry). With
+       foreR held at 0 the forearm carries an identity transform and just
+       rides the upper arm as one piece, so the elbow can never split.
+       A touch more shoulder swing keeps it lively without the wrist. */
+    P.armR = -116 + Math.sin(t * 8.5) * 28;         /* wave from the shoulder */
+    P.foreR = 0;                                     /* rigid forearm — no elbow seam */
     P.rigY = -Math.abs(Math.sin(t * 4.25)) * 2.4;   /* bounce */
     P.squash = 1 + Math.abs(Math.sin(t * 4.25)) * 0.03;
     P.head = 7 + Math.sin(t * 4.25 + 1.2) * 2;      /* pleased tilt */
