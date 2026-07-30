@@ -2180,8 +2180,12 @@
       fireFlowLanding(f.cx + 19, f.cy + 52);
     }
 
-    /* keep ticking while moving or just-scrolled; then rest (no idle rAF) */
-    if (dist > 0.5 || now - f.scrollT < 140) {
+    /* keep ticking while moving or just-scrolled; AND continuously while
+       he's waving at the sign-off (rig only) so the wave keeps bouncing
+       instead of freezing on the frame he settled. Elsewhere the rАF
+       rests when idle — so no battery drain mid-page (fidgets stay a
+       desktop-only touch). */
+    if (dist > 0.5 || now - f.scrollT < 140 || (f.rig && atWave)) {
       f.raf = requestAnimationFrame(flowGuyTick);
     } else {
       f.lastT = 0;
