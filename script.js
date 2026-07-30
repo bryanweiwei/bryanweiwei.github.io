@@ -1790,9 +1790,10 @@
   }
 
   addEventListener('scroll', function () {
-    if (inScene() || ticking) return;
-    ticking = true;
-    requestAnimationFrame(flowFrame);
+    if (inScene()) return;
+    if (!ticking) { ticking = true; requestAnimationFrame(flowFrame); }
+    /* wake the damped follow so little Bryan tracks the scroll */
+    if (flowFollow) { flowFollow.scrollT = performance.now(); flowKick(); }
   }, { passive: true });
 
   addEventListener('resize', function () {
@@ -1833,9 +1834,21 @@
   motionQ.addEventListener('change', setMode);
   wideQ.addEventListener('change', setMode);
 
-  /* ---------- flow-mode little Bryan (unchanged from v3) ---------- */
+  /* ---------- flow-mode little Bryan: damped follow down the spine ----
+     v4 rewrite. The old build used an IntersectionObserver to re-aim him
+     at whatever stop crossed a band, then a springy CSS transition chased
+     each target. On a phone a fast scroll fired many re-aims at once
+     (IO batches them, NOT in spatial order) and the overshoot ease made
+     him "zoom" up and down. Now a single rAF lerp damps his transform
+     toward the ONE nearest dock — a focus line ~45% down the viewport —
+     so it's order-independent, overshoot-free, and reverses cleanly:
+     he runs down the spine while you scroll and settles on each stop.
 
-  var flowGuyIO = null;
+     Poses stay CSS-class driven in flow (see #guy.p-* in style.css); we
+     deliberately DON'T call initChar()/gsap here — its per-limb inline
+     transforms would override those class poses and freeze him. */
+
+  var flowFollow = null;
 
   function guyDockPoint(el) {
     var r = el.getBoundingClientRect();
@@ -1848,28 +1861,82 @@
     return { x: r.left + beforeLeft + 7 + scrollX, y: r.top + 35 + scrollY };
   }
 
-  function moveFlowGuyTo(el, wave) {
-    var p;
+  /* the guy transform (page coords) that docks him at el, the page-y used
+     to pick the active stop, and whether he waves there */
+  function flowDock(el) {
     if (el.id === 'contact-title') {
       var r = el.getBoundingClientRect();
-      p = { x: r.left + scrollX + 10, y: r.top + scrollY - 8 };
-      guy.style.transform =
-        'translate(' + (p.x) + 'px,' + (p.y - 50) + 'px)';
-    } else {
-      p = guyDockPoint(el);
-      guy.style.transform =
-        'translate(' + (p.x - 19) + 'px,' + (p.y - 48) + 'px)';
+      var x = r.left + scrollX, y = r.top + scrollY;
+      return { tx: x + 10, ty: y - 58, y: y, wave: true };
     }
-    setPose(wave ? 'stand' : 'leap', !!wave);
-    if (!wave) {
-      clearTimeout(moveFlowGuyTo._t);
-      moveFlowGuyTo._t = setTimeout(function () { setPose('stand', false); }, 650);
+    var p = guyDockPoint(el);
+    return { tx: p.x - 19, ty: p.y - 48, y: p.y, wave: false };
+  }
+
+  function buildFlowDocks() {
+    /* every spine stop, top to bottom: stations, work cards, AND the
+       ledger rows (they ride the same left spine in flow — without them
+       he'd have nothing to stand on across #also and would slide the
+       whole section in one lurch), then the sign-off */
+    var els = stations.concat(cards).concat(alsoRows);
+    var title = document.getElementById('contact-title');
+    if (title) els.push(title);
+    return els.map(flowDock).sort(function (a, b) { return a.y - b.y; });
+  }
+
+  /* nearest dock to a focus line ~45% down the viewport (page coords) */
+  function flowActive(f) {
+    var focus = scrollY + vh * 0.45;
+    var best = 0, bd = Infinity;
+    for (var i = 0; i < f.docks.length; i++) {
+      var d = Math.abs(f.docks[i].y - focus);
+      if (d < bd) { bd = d; best = i; }
+    }
+    return best;
+  }
+
+  function flowGuyTick(now) {
+    var f = flowFollow;
+    if (!f) return;
+    f.raf = 0;
+    var dt = f.lastT ? Math.min(64, now - f.lastT) : 16.7;
+    f.lastT = now;
+
+    f.active = flowActive(f);
+    var t = f.docks[f.active];
+    /* frame-rate-independent damping (~0.18 of the gap per 16.7ms) */
+    var k = 1 - Math.pow(1 - 0.18, dt / 16.7);
+    var sx = (t.tx - f.cx) * k, sy = (t.ty - f.cy) * k;
+    /* speed ceiling (~55px per 16.7ms): across any wide gap he RUNS down
+       smoothly instead of teleporting in the first frame */
+    var maxStep = 55 * dt / 16.7;
+    var mag = Math.sqrt(sx * sx + sy * sy);
+    if (mag > maxStep) { var sc = maxStep / mag; sx *= sc; sy *= sc; }
+    f.cx += sx;
+    f.cy += sy;
+    guy.style.transform = 'translate(' + f.cx.toFixed(1) + 'px,' + f.cy.toFixed(1) + 'px)';
+
+    var dist = Math.abs(t.tx - f.cx) + Math.abs(t.ty - f.cy);
+    if (t.wave && dist < 4) setPose('stand', true);
+    else if (dist > 3) setPose('run', false);
+    else setPose('stand', false);
+
+    /* keep ticking while moving or just-scrolled; then rest (no idle rAF) */
+    if (dist > 0.5 || now - f.scrollT < 140) {
+      f.raf = requestAnimationFrame(flowGuyTick);
+    } else {
+      f.lastT = 0;
     }
   }
 
+  function flowKick() {
+    if (flowFollow && !flowFollow.raf) flowFollow.raf = requestAnimationFrame(flowGuyTick);
+  }
+
   function teardownFlowGuy() {
-    if (flowGuyIO) { flowGuyIO.disconnect(); flowGuyIO = null; }
-    guy.classList.remove('flow-guy', 'hopping', 'p-stand', 'p-run', 'p-leap', 'waving');
+    if (flowFollow && flowFollow.raf) cancelAnimationFrame(flowFollow.raf);
+    flowFollow = null;
+    guy.classList.remove('flow-guy', 'p-stand', 'p-run', 'p-leap', 'waving');
     lastPose = '';
     guy.removeAttribute('style');
   }
@@ -1879,43 +1946,25 @@
     if (inScene()) return;
 
     var title = document.getElementById('contact-title');
+    guy.classList.add('flow-guy');
+    guy.style.opacity = 1;
 
+    /* reduced motion: park at the sign-off, waving, no scroll-follow */
     if (!motionQ.matches) {
-      guy.classList.add('flow-guy');
-      moveFlowGuyTo(title, true);
-      guy.style.opacity = 1;
+      var d = flowDock(title);
+      guy.style.transform = 'translate(' + d.tx + 'px,' + d.ty + 'px)';
+      setPose('stand', true);
       return;
     }
 
-    guy.classList.add('flow-guy');
-    var stops = stations.concat(cards);
-    var first = true;
-
-    moveFlowGuyTo(stations[0], false);
-    setPose('stand', false);
-    guy.style.opacity = 1;
-
-    flowGuyIO = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) {
-        if (!e.isIntersecting) return;
-        if (first) { first = false; guy.classList.add('hopping'); }
-        moveFlowGuyTo(e.target, e.target === title);
-      });
-    }, { rootMargin: '-35% 0px -45% 0px' });
-
-    stops.forEach(function (el) { flowGuyIO.observe(el); });
-    flowGuyIO.observe(title);
+    flowFollow = { docks: buildFlowDocks(), active: 0, cx: 0, cy: 0, raf: 0, lastT: 0, scrollT: 0 };
+    /* snap onto the currently-active stop so there's no cross-page lerp on load */
+    flowFollow.active = flowActive(flowFollow);
+    var t0 = flowFollow.docks[flowFollow.active];
+    flowFollow.cx = t0.tx; flowFollow.cy = t0.ty;
+    guy.style.transform = 'translate(' + t0.tx + 'px,' + t0.ty + 'px)';
+    setPose('stand', !!t0.wave);
   }
-
-  /* landing beat on mobile hops: squash + dust (once; needs GSAP, else skip) */
-  guy.addEventListener('transitionend', function (ev) {
-    if (ev.propertyName !== 'transform' || inScene()) return;
-    if (!window.gsap || !motionQ.matches) return;
-    initChar();
-    fireDust();
-    gsap.fromTo('#rig', { scaleY: 0.88, svgOrigin: '20 48' },
-      { scaleY: 1, duration: 0.35, ease: 'back.out(3)' });
-  });
 
   /* ---------- palette bridge ---------- */
 
