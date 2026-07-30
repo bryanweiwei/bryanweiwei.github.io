@@ -1421,15 +1421,15 @@
      void, layered around the centered copy (which always paints above). */
   var KNOCK_SHOTS = [
     { src: 'photo-presenting', ww: 480, pos: 'left:4vw;top:10vh',   w: 320, r: -6.5 },
-    { src: 'photo-msft',       ww: 320, pos: 'right:5vw;top:13vh',  w: 270, r: 4 },
-    { src: 'photo-bte-group',  ww: 320, pos: 'left:7vw;top:42vh',   w: 260, r: 3.5 },
+    { src: 'photo-msft',       ww: 320, pos: 'right:5vw;top:13vh',  w: 240, r: 4 },
+    { src: 'photo-bte-group',  ww: 320, pos: 'left:8.5vw;top:39vh', w: 240, r: 3.5 },
     /* fab and pdce are tall portraits (1.48 / 1.53 h/w) — sized so both
        fit the fold at 720, and pdce (the suit) reads FULLY beside fab
        instead of buried under it: fab hugs the right edge below msft;
        pdce sits inward at 58vh with only fab's corner grazing its edge. */
-    { src: 'photo-fab',        ww: 360, pos: 'right:3vw;top:52vh',  w: 200, r: -3 },
-    { src: 'photo-hackathon',  ww: 360, pos: 'left:19vw;top:67vh',  w: 230, r: 2.5 },
-    { src: 'photo-pdce',       ww: 320, pos: 'right:17vw;top:58vh', w: 210, r: -4.5 }
+    { src: 'photo-fab',        ww: 360, pos: 'right:4.5vw;top:52vh', w: 200, r: -5.5 },
+    { src: 'photo-hackathon',  ww: 360, pos: 'left:19vw;top:63vh',  w: 230, r: -2.5 },
+    { src: 'photo-pdce',       ww: 320, pos: 'right:17vw;top:56vh', w: 230, r: -4.5 }
   ];
 
   function knockBuild() {
