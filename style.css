@@ -1556,16 +1556,21 @@ html.scene #guy {
 
 /* ---------- 12. Flow-mode small screens ---------- */
 
-@media (max-width: 759px) {
-  /* HERO (phone): a left-aligned masthead that IS the head of the
-     timeline. The line no longer floats centered — it drops from under
-     the copy down the LEFT edge at the spine's exact x (4vw + 8px) and
-     meets #story's spine with no gap (hero padding-bottom: 0), so the
-     geometry reads as one continuous stroke. Bolder type fills the
-     width the centering used to waste. */
+/* FLOW layout (narrow windows / tablets / phones — everything below the
+   scene breakpoint, paired with wideQ min-width:1000 in script.js). */
+@media (max-width: 999px) {
+  /* HERO: a left-aligned masthead that IS the head of the timeline. The
+     line no longer floats centered — it drops from under the copy down
+     the LEFT edge at the spine's exact x (4vw + 8px) and meets #story's
+     spine with no gap (hero padding-bottom: 0), one continuous stroke.
+     The hero shares the SAME centered 680px column as #story/#work/#also
+     so their spines line up at every width (below 680 all four are just
+     full-width, so phone layout is unchanged). Bolder type fills it. */
   .hero {
     align-items: flex-start;
     text-align: left;
+    max-width: 680px;
+    margin: 0 auto;
     padding: 7vh 4vw 0 calc(4vw + 34px);
   }
   .hero h1 { font-size: clamp(56px, 18vw, 96px); }
