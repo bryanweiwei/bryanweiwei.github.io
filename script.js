@@ -1504,13 +1504,15 @@
      Limbs ride jumpPose via gctx: airborne through the fall, then the
      squash-stretch landing crouch. `at` shifts the whole beat (the
      re-arm replays it almost immediately; the entrance waits for the
-     line to finish). */
-  function knockDropIn(tl, at) {
+     line to finish). `fromBelow` flips the arrival: on a scroll-up
+     re-arm he springs UP from below the fold with the rising prints
+     (accelerate-in reads as a fall; decelerate-out reads as a leap). */
+  function knockDropIn(tl, at, fromBelow) {
     if (at == null) at = 2.35;
     KNOCK.restY = Math.round(vh * 0.28);   /* feet ≈ 78vh, on the line */
-    var d = { y: -(vh / 2 + 110) };
+    var d = { y: fromBelow ? vh / 2 + 150 : -(vh / 2 + 110) };
     tl.to(d, {
-      y: KNOCK.restY, duration: 0.5, ease: 'power2.in',
+      y: KNOCK.restY, duration: 0.5, ease: fromBelow ? 'power2.out' : 'power2.in',
       onStart: function () {
         KNOCK.hold = true;              /* renderScene keeps him visible */
         guy.style.opacity = 1;
@@ -1667,7 +1669,7 @@
         }, i * 0.03);
       });
       if (himThere) KNOCK.armed = true;
-      else { KNOCK.hold = false; knockDropIn(tl, 0.1); }
+      else { KNOCK.hold = false; knockDropIn(tl, 0.1, true); }   /* rises with the prints */
       KNOCK.done = false;   /* re-armed: the release trigger is live again */
     });
   }
