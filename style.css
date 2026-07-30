@@ -1568,7 +1568,7 @@ html.debug-frozen::after {
 
 /* FLOW layout (narrow windows / tablets / phones — everything below the
    scene breakpoint, paired with wideQ min-width:1000 in script.js). */
-@media (max-width: 999px) {
+@media (max-width: 1279px) {
   /* HERO: a left-aligned masthead that IS the head of the timeline. The
      line no longer floats centered — it drops from under the copy down
      the LEFT edge at the spine's exact x (4vw + 8px) and meets #story's

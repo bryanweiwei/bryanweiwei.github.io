@@ -27,8 +27,8 @@
      knockdown set-dressing — all tuned for ~1280). Below this it's
      cramped, so narrow windows / tablets get the clean flow timeline.
      MUST stay paired with the flow layout's @media max-width in style.css
-     (999 = 1000 - 1), else a width band gets flow markup under scene gating. */
-  var wideQ = matchMedia('(min-width: 1000px)');
+     (1279 = 1280 - 1), else a width band gets flow markup under scene gating. */
+  var wideQ = matchMedia('(min-width: 1280px)');
 
   var $ = function (s) { return document.querySelector(s); };
   var vline = $('#vline'), hline = $('#hline'), node = $('#node'),
