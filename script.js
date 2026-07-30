@@ -2041,6 +2041,35 @@
     return best;
   }
 
+  /* landing beat when the flow-guy settles on a station: a spine impact
+     pulse + a couple of dust bits at his feet. Cheap DOM/CSS (no SVG-rig
+     transforms, so no paint-quirk risk); appended to <body> in PAGE coords
+     to match the guy's own page-space transform, so they sit right and
+     scroll with him. gsap is loaded in flow, so this just works. */
+  function fireFlowLanding(px, py) {
+    if (!window.gsap) return;
+    var pulse = document.createElement('div');
+    pulse.setAttribute('aria-hidden', 'true');
+    pulse.style.cssText = 'position:absolute;left:' + px + 'px;top:' + py +
+      'px;width:11px;height:11px;margin:-6px 0 0 -6px;border:2px solid #41b06e;' +
+      'border-radius:50%;pointer-events:none;z-index:8;';
+    document.body.appendChild(pulse);
+    gsap.fromTo(pulse, { scale: 0.3, opacity: 0.9 },
+      { scale: 2.7, opacity: 0, duration: 0.5, ease: 'power2.out',
+        onComplete: function () { pulse.remove(); } });
+    for (var i = 0; i < 3; i++) {
+      var d = document.createElement('div');
+      d.setAttribute('aria-hidden', 'true');
+      d.style.cssText = 'position:absolute;left:' + px + 'px;top:' + py +
+        'px;width:4px;height:4px;margin:-2px 0 0 -2px;background:#5d7466;' +
+        'border-radius:50%;pointer-events:none;z-index:8;opacity:.5;';
+      document.body.appendChild(d);
+      gsap.to(d, { x: (i - 1) * 11, y: -5 - (i % 2) * 5, opacity: 0, scale: 1.5,
+        duration: 0.45, ease: 'power2.out',
+        onComplete: (function (el) { return function () { el.remove(); }; })(d) });
+    }
+  }
+
   function flowGuyTick(now) {
     var f = flowFollow;
     if (!f) return;
@@ -2048,8 +2077,12 @@
     var dt = f.lastT ? Math.min(64, now - f.lastT) : 16.7;
     f.lastT = now;
 
+    var prevActive = f.active;
     f.active = flowActive(f);
     var t = f.docks[f.active];
+    /* a leap kicks off whenever he re-targets a new station (a real hop,
+       not a slide) — held briefly, then he runs/settles */
+    if (f.active !== prevActive && Math.abs(t.ty - f.cy) > 22) f.leapUntil = now + 300;
     /* frame-rate-independent damping (~0.18 of the gap per 16.7ms) */
     var k = 1 - Math.pow(1 - 0.18, dt / 16.7);
     var sx = (t.tx - f.cx) * k, sy = (t.ty - f.cy) * k;
@@ -2063,9 +2096,23 @@
     guy.style.transform = 'translate(' + f.cx.toFixed(1) + 'px,' + f.cy.toFixed(1) + 'px)';
 
     var dist = Math.abs(t.tx - f.cx) + Math.abs(t.ty - f.cy);
-    if (t.wave && dist < 4) setPose('stand', true);
-    else if (dist > 3) setPose('run', false);
-    else setPose('stand', false);
+    var atWave = t.wave && dist < 4;
+    if (atWave) {
+      setPose('stand', true);
+      if (!f.confettiFired) { f.confettiFired = true; fireConfetti(); }   /* T1: celebrate at the sign-off */
+    } else {
+      if (!t.wave) f.confettiFired = false;                               /* re-arm once he leaves the sign-off */
+      var leaping = now < (f.leapUntil || 0);
+      setPose(leaping ? 'leap' : (dist > 3 ? 'run' : 'stand'), false);    /* T1: hop pose between stations */
+    }
+
+    /* T1: landing beat — first settle on a new (non-wave) dock kicks dust
+       + a spine pulse at his feet (his transform is page-space; feet ~
+       spine x = cx+19, y = cy+52) */
+    if (dist < 3 && f.landed !== f.active && !t.wave) {
+      f.landed = f.active;
+      fireFlowLanding(f.cx + 19, f.cy + 52);
+    }
 
     /* keep ticking while moving or just-scrolled; then rest (no idle rAF) */
     if (dist > 0.5 || now - f.scrollT < 140) {
@@ -2103,9 +2150,11 @@
       return;
     }
 
-    flowFollow = { docks: buildFlowDocks(), active: 0, cx: 0, cy: 0, raf: 0, lastT: 0, scrollT: 0 };
+    flowFollow = { docks: buildFlowDocks(), active: 0, cx: 0, cy: 0, raf: 0,
+                   lastT: 0, scrollT: 0, landed: -1, confettiFired: false, leapUntil: 0 };
     /* snap onto the currently-active stop so there's no cross-page lerp on load */
     flowFollow.active = flowActive(flowFollow);
+    flowFollow.landed = flowFollow.active;   /* already parked here — no landing puff on load */
     var t0 = flowFollow.docks[flowFollow.active];
     flowFollow.cx = t0.tx; flowFollow.cy = t0.ty;
     guy.style.transform = 'translate(' + t0.tx + 'px,' + t0.ty + 'px)';
