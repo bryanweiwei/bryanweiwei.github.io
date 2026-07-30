@@ -1151,6 +1151,9 @@
        tween and Lenis never fight over the scroll position. */
     ScrollTrigger.scrollerProxy(window, {
       scrollTop: function (value) {
+        /* the proxy outlives killScene (lenis = null in flow mode);
+           fall back to native so a mid-switch call never throws */
+        if (!lenis) { if (arguments.length) scrollTo(0, value); return scrollY; }
         if (arguments.length) { lenis.scrollTo(value, { immediate: true }); return; }
         return lenis.scroll;
       },
@@ -1419,7 +1422,7 @@
   var KNOCK_SHOTS = [
     { src: 'photo-presenting', ww: 480, pos: 'left:3vw;top:9vh',    w: 320, r: -5 },
     { src: 'photo-msft',       ww: 320, pos: 'right:3vw;top:12vh',  w: 300, r: 4 },
-    { src: 'photo-bte-group',  ww: 320, pos: 'left:9vw;top:48vh',   w: 260, r: 3.5 },
+    { src: 'photo-bte-group',  ww: 320, pos: 'left:7vw;top:48vh',   w: 260, r: 3.5 },
     { src: 'photo-fab',        ww: 360, pos: 'right:8vw;top:46vh',  w: 280, r: -3 },
     { src: 'photo-hackathon',  ww: 360, pos: 'left:18vw;top:66vh',  w: 250, r: 2.5 },
     { src: 'photo-pdce',       ww: 320, pos: 'right:18vw;top:64vh', w: 240, r: -4.5 }
@@ -1428,13 +1431,27 @@
   function knockBuild() {
     knockTeardown();   /* mode re-entry: never stack two runs */
 
+    /* one-shot per page load: once the photos have fallen, any scene
+       rebuild (resize, browser zoom, devtools, motion toggle — all of
+       which replay the entrance) must NOT resurrect them. He still
+       drops in and idles; the shots stay down. KNOCK.done stays true
+       from the teardown, so the first-scroll release never re-fires. */
+    if (KNOCK.playedOnce) {
+      var bare = gsap.timeline({ delay: 0.15 });
+      KNOCK.tl = bare;
+      knockDropIn(bare);
+      return;
+    }
+
     var box = document.createElement('div');
     box.id = 'knock';
     box.setAttribute('aria-hidden', 'true');
     KNOCK.shots = KNOCK_SHOTS.map(function (s, i) {
       var el = document.createElement('div');
       el.className = 'knock-shot';
-      el.style.cssText = s.pos + ';width:' + s.w + 'px';
+      /* stack like leaned prints: rows nearer the top sit ABOVE lower
+         rows, so the mid-row plates are never blocked by the bottom row */
+      el.style.cssText = s.pos + ';width:' + s.w + 'px;z-index:' + (KNOCK_SHOTS.length - i);
       var inWrap = document.createElement('div');
       inWrap.className = 'ks-in';
       /* desync the sways so they don't breathe in unison */
@@ -1466,14 +1483,18 @@
        never in front of the name (they're behind the copy in the DOM) */
     tl.to(KNOCK.shots, { opacity: 1, duration: 0.55, ease: 'power1.out', stagger: 0.07 }, 0.7);
 
-    /* THE DROP-IN — at the end of the entrance (the line finishes at
-       ~2.3s) he falls in from above the viewport, straight past the
-       name, and lands ON the visible stretch of the ink line below the
-       copy (the hero's paper gradient goes transparent from ~75vh, so
-       the line reads there). Then he just... lives there, idling among
-       the snapshots (guyTick fidgets), until the visitor scrolls.
-       Limbs ride jumpPose via gctx: airborne through the fall, then the
-       squash-stretch landing crouch. */
+    knockDropIn(tl);
+  }
+
+  /* THE DROP-IN — at the end of the entrance (the line finishes at
+     ~2.3s) he falls in from above the viewport, straight past the
+     name, and lands ON the visible stretch of the ink line below the
+     copy (the hero's paper gradient goes transparent from ~75vh, so
+     the line reads there). Then he just... lives there, idling among
+     the snapshots (guyTick fidgets), until the visitor scrolls.
+     Limbs ride jumpPose via gctx: airborne through the fall, then the
+     squash-stretch landing crouch. */
+  function knockDropIn(tl) {
     KNOCK.restY = Math.round(vh * 0.28);   /* feet ≈ 78vh, on the line */
     var d = { y: -(vh / 2 + 110) };
     tl.to(d, {
@@ -1514,6 +1535,7 @@
   function knockRelease() {
     if (KNOCK.released || KNOCK.done) return;
     KNOCK.released = true;
+    KNOCK.playedOnce = true;   /* the photos never come back this visit */
     var scn = document.getElementById('scene');
 
     /* stop the entrance-aligned timeline (pending fade/drop included) */
