@@ -30,7 +30,9 @@
     var d = document.documentElement;
     d.classList.add('js');
     var motionOk = matchMedia('(prefers-reduced-motion: no-preference)').matches;
-    var wide = matchMedia('(min-width: 760px)').matches;
+    // scene is a wide-desktop experience; must match wideQ in script.js
+    // and the flow @media (max-width:1279) in style.css.
+    var wide = matchMedia('(min-width: 1280px)').matches;
     var userOff = false;
     try { userOff = localStorage.getItem('bw-motion') === 'off'; } catch (e) {}
     if (motionOk && wide && !userOff) d.classList.add('scene');

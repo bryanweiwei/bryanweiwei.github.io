@@ -23,7 +23,12 @@
 
   var html = document.documentElement;
   var motionQ = matchMedia('(prefers-reduced-motion: no-preference)');
-  var wideQ = matchMedia('(min-width: 760px)');
+  /* scene is a wide-desktop experience (revolving 3D ring, WebGL line,
+     knockdown set-dressing — all tuned for ~1280). Below this it's
+     cramped, so narrow windows / tablets get the clean flow timeline.
+     MUST stay paired with the flow layout's @media max-width in style.css
+     (1279 = 1280 - 1), else a width band gets flow markup under scene gating. */
+  var wideQ = matchMedia('(min-width: 1280px)');
 
   var $ = function (s) { return document.querySelector(s); };
   var vline = $('#vline'), hline = $('#hline'), node = $('#node'),
@@ -183,20 +188,28 @@
   var P = {}, Pfields = Object.keys(POSES.stand);
   Pfields.forEach(function (k) { P[k] = POSES.stand[k]; });
 
+  /* joint pivots in viewBox coords. gsap's svgOrigin bakes these into each
+     group's matrix so a limb rotates about its JOINT, not the SVG canvas
+     origin (0,0) — rotating about 0,0 is exactly what scatters him. Kept
+     as data so both initChar and the self-heal guard can (re)establish it. */
+  var CHAR_IDS = ['rig', 'bw-body', 'bw-head', 'bw-scarf', 'bw-armL', 'bw-armR',
+                  'bw-foreL', 'bw-foreR', 'bw-legL', 'bw-legR', 'bw-shinL', 'bw-shinR'];
+  var CHAR_ORIGINS = {
+    rig: '20 48', 'bw-body': '20 32', 'bw-head': '20 15', 'bw-scarf': '20 15',
+    'bw-armL': '20 20', 'bw-armR': '20 20', 'bw-foreL': '15 25', 'bw-foreR': '25 25',
+    'bw-legL': '20 32', 'bw-legR': '20 32', 'bw-shinL': '16 39', 'bw-shinR': '24 39'
+  };
+  function setCharOrigins() {
+    CHAR_IDS.forEach(function (id) {
+      if (CHAR.el[id]) gsap.set(CHAR.el[id], { svgOrigin: CHAR_ORIGINS[id], rotation: 0.001 });
+    });
+  }
+
   function initChar() {
     if (CHAR.ready || !window.gsap) return;
-    var ids = ['rig', 'bw-body', 'bw-head', 'bw-scarf', 'bw-armL', 'bw-armR',
-               'bw-foreL', 'bw-foreR', 'bw-legL', 'bw-legR', 'bw-shinL', 'bw-shinR'];
     CHAR.el = {};
-    ids.forEach(function (id) { CHAR.el[id] = document.getElementById(id); });
-    var origins = {
-      rig: '20 48', 'bw-body': '20 32', 'bw-head': '20 15', 'bw-scarf': '20 15',
-      'bw-armL': '20 20', 'bw-armR': '20 20', 'bw-foreL': '15 25', 'bw-foreR': '25 25',
-      'bw-legL': '20 32', 'bw-legR': '20 32', 'bw-shinL': '16 39', 'bw-shinR': '24 39'
-    };
-    ids.forEach(function (id) {
-      gsap.set(CHAR.el[id], { svgOrigin: origins[id], rotation: 0.001 });
-    });
+    CHAR_IDS.forEach(function (id) { CHAR.el[id] = document.getElementById(id); });
+    setCharOrigins();
     CHAR.dust = [].slice.call(document.querySelectorAll('#bw-dust .dust'));
     CHAR.scarfA = 0; CHAR.scarfV = 0;
     CHAR.runPhase = 0;
@@ -264,8 +277,17 @@
 
   function wavePose(t) {
     lerpPose(POSES.stand, POSES.stand, 0);
-    P.armR = -118 + Math.sin(t * 8.5) * 22;         /* the wave */
-    P.foreR = -20 + Math.sin(t * 8.5 + 0.6) * 12;   /* wrist follows */
+    /* The wave swings the whole arm from the SHOULDER and keeps the
+       forearm rigid (foreR = 0). The raised upper arm (-118deg) plus an
+       INDEPENDENT forearm rotation is the one pose that stresses the
+       nested-SVG transform hard enough that some GPU compositors paint a
+       seam at the elbow — the hand looks severed (it measures a perfect
+       0px gap in the DOM, so it's a paint quirk, not geometry). With
+       foreR held at 0 the forearm carries an identity transform and just
+       rides the upper arm as one piece, so the elbow can never split.
+       A touch more shoulder swing keeps it lively without the wrist. */
+    P.armR = -116 + Math.sin(t * 8.5) * 28;         /* wave from the shoulder */
+    P.foreR = 0;                                     /* rigid forearm — no elbow seam */
     P.rigY = -Math.abs(Math.sin(t * 4.25)) * 2.4;   /* bounce */
     P.squash = 1 + Math.abs(Math.sin(t * 4.25)) * 0.03;
     P.head = 7 + Math.sin(t * 4.25 + 1.2) * 2;      /* pleased tilt */
@@ -279,6 +301,7 @@
         { opacity: 0.55, scale: 0.3, x: 0, y: 0, svgOrigin: '20 48' },
         { opacity: 0, scale: 1.1, x: (i - 1) * 5, y: -2, duration: 0.45, ease: 'power2.out', overwrite: true });
     });
+    pluckLine(1);   /* his weight rings the line (no-op off the line) */
   }
 
   function killFidget(fast) {
@@ -428,6 +451,97 @@
     CHAR.idleSince = now;
   }
 
+  /* ---------- shatter guard: little Bryan can never come apart ----------
+     Every frame, measure how far each limb group has drifted from the rig
+     origin (viewBox 20,48, mapped into the guy's on-screen box). A healthy
+     rig keeps every limb within ~SHATTER_PX; if a limb blows past that,
+     his transforms have come apart (wrong pivot / accumulated tweens /
+     wiped origin). DEBUG mode (?debug or #debug) freezes the exact frame
+     and dumps state for inspection; production silently self-heals — kills
+     every limb tween, re-establishes the joint origins, snaps to a clean
+     stand — so no visitor ever sees a shattered mascot. */
+  var GUY_DEBUG = /(?:[?&#])debug\b/.test(location.search + location.hash);
+  var SHATTER_PX = 70;                 /* max healthy limb drift, screen px */
+  var guyFrozen = false, guyMaxDrift = 0;
+
+  function guyDrift() {
+    if (!guy) return -1;
+    var cs = getComputedStyle(guy);
+    if (cs.display === 'none' || +cs.opacity < 0.05) return -1;
+    var box = guy.getBoundingClientRect();
+    if (!box.width) return -1;
+    /* rig origin (20,48 in the 40x56 viewBox) mapped into the box */
+    var ox = box.left + box.width * (20 / 40);
+    var oy = box.top + box.height * (48 / 56);
+    var worst = 0;
+    for (var i = 1; i < CHAR_IDS.length; i++) {   /* skip 'rig' itself */
+      var el = CHAR.el ? CHAR.el[CHAR_IDS[i]] : document.getElementById(CHAR_IDS[i]);
+      if (!el) continue;
+      var r = el.getBoundingClientRect();
+      var d = Math.hypot((r.left + r.width / 2) - ox, (r.top + r.height / 2) - oy);
+      if (d > worst) { worst = d; guyGuard.who = CHAR_IDS[i]; }
+    }
+    return worst;
+  }
+
+  function guyGuard() {
+    if (!window.gsap || guyFrozen) return;
+    /* runs every frame, immediately after guyTick — so a production heal
+       repaints clean in the same frame (invisible). Only active in scene
+       (registered there), and cheap: one style read, and the 9 limb rect
+       reads only while he's actually on screen. */
+    var drift = guyDrift();
+    if (drift < 0) return;
+    if (drift > guyMaxDrift) guyMaxDrift = drift;
+    if (drift <= SHATTER_PX) return;
+    if (GUY_DEBUG) guyFreezeDump(drift);
+    else healGuy();
+  }
+  guyGuard.who = '';
+
+  function guyFreezeDump(drift) {
+    guyFrozen = true;
+    if (window.gsap) gsap.globalTimeline.pause();
+    html.classList.add('debug-frozen');
+    var limbs = CHAR_IDS.map(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return { id: id, missing: true };
+      return {
+        id: id,
+        transform: el.style.transform || getComputedStyle(el).transform,
+        origin: getComputedStyle(el).transformOrigin,
+        box: getComputedStyle(el).transformBox,
+        tweens: window.gsap ? gsap.getTweensOf(el).length : -1
+      };
+    });
+    console.error('[GUY SHATTER] drift=' + drift.toFixed(1) + 'px on ' + guyGuard.who, {
+      scrollY: Math.round(scrollY),
+      lenis: lenis ? Math.round(lenis.scroll) : null,
+      p: gctx.p, mode: gctx.mode, frac: gctx.frac, visible: gctx.visible,
+      charReady: CHAR.ready,
+      activeTweensOnLimbs: limbs.reduce(function (n, l) { return n + (l.tweens > 0 ? l.tweens : 0); }, 0),
+      limbs: limbs
+    });
+  }
+
+  function healGuy() {
+    if (!window.gsap) return;
+    killFidget(false);
+    var els = CHAR_IDS.map(function (id) { return (CHAR.el && CHAR.el[id]) || document.getElementById(id); })
+                      .filter(Boolean);
+    gsap.killTweensOf(els);
+    /* clean slate FIRST: re-setting a confused svgOrigin in place doesn't
+       fully recompute in gsap, so wipe every transform, THEN re-establish
+       the joint pivots and snap to a clean stand (mirrors a fresh init). */
+    gsap.set(els, { clearProps: 'all' });
+    if (CHAR.el) {
+      setCharOrigins();
+      CHAR.scarfA = 0; CHAR.scarfV = 0;
+      Pfields.forEach(function (k) { P[k] = POSES.stand[k]; });
+      if (CHAR.ready) applyP();
+    }
+  }
+
   /* ---------- the master timeline ---------- */
 
   var S = null;      /* numeric scene state, tweened by the timeline */
@@ -446,6 +560,60 @@
   var onSceneMouse = null;
   var hintIdleTimer = null;
   var hintScrollKill = null;
+
+  /* ---------- hero knockdown: little Bryan knocks the photos down ----
+     Scene-mode-only load beat, layered over the hero entrance: scattered
+     snapshots sit quietly in the hero whitespace; after the line draws,
+     he drops in, lands with a thud (screen tremble), and the snapshots
+     break loose and tumble off the bottom. The photos are the SAME
+     images found later at station ii and the ledger — no copy says so.
+     hold: keeps him visible standing by the line at rest (renderScene
+     honors it below p≈1.4, one-shot). done: sequence finished/aborted. */
+  var KNOCK = { tl: null, box: null, shots: [], hold: false, done: true };
+
+  /* ---------- wave confetti: paper scraps at the sign-off ----------
+     When little Bryan lands his flip and starts waving, a handful of
+     cut-paper bits burst from him — the same palette as the page, like
+     offcuts from the photo prints he knocked down. One-shot per arrival
+     (re-arms if you scroll back past the flourish), scene mode only. */
+  var WAVE = { fired: false };
+
+  function fireConfetti() {
+    var r = guy.getBoundingClientRect();
+    var cx = r.left + r.width / 2, cy = r.top + r.height * 0.4;
+    var colors = ['#41b06e', '#0e1611', '#dff0e5', '#2c7a4a', '#f4f9f5', '#1e4d31'];
+    var box = document.createElement('div');
+    box.setAttribute('aria-hidden', 'true');
+    box.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:55';
+    document.body.appendChild(box);
+    /* a big, wide celebratory burst: ~52 paper bits explode outward from
+       him, pop up, then rain all the way off the bottom. i-based variety
+       (no Math.random) keeps it scrub-stable. */
+    var N = 52;
+    for (var i = 0; i < N; i++) {
+      var b = document.createElement('div');
+      var kind = i % 4;                                 /* strip / square / big / dot */
+      var w = kind === 0 ? 5 : kind === 1 ? 9 : kind === 2 ? 13 : 6;
+      var h = kind === 0 ? 15 : kind === 1 ? 9 : kind === 2 ? 13 : 6;
+      b.style.cssText = 'position:absolute;left:' + cx + 'px;top:' + cy + 'px;' +
+        'width:' + w + 'px;height:' + h + 'px;background:' + colors[i % colors.length] + ';' +
+        'will-change:transform,opacity;' +
+        (kind === 3 ? 'border-radius:50%;' : '') +
+        (i % 6 === 5 ? 'border:1px solid rgba(14,22,17,.3);' : '');
+      box.appendChild(b);
+      var side = i % 2 ? 1 : -1;
+      var spread = ((i * 97) % 100) / 100;              /* 0..1 */
+      var vx = side * (70 + spread * 520);              /* wide reach: up to ~590px each way */
+      var dur = 1.5 + (i % 6) * 0.16;                   /* 1.5 .. 2.3s */
+      var fall = (vh || 800) * 0.62 + (i * 53) % 260;   /* rains off the bottom */
+      gsap.to(b, { x: vx, duration: dur, ease: 'power3.out' });               /* explode outward */
+      gsap.to(b, { y: fall, duration: dur, ease: 'back.in(' + (1.1 + (i % 4) * 0.45) + ')',
+        delay: (i % 7) * 0.012 });                                           /* pop up, then fall */
+      gsap.to(b, { rotation: side * (360 + (i * 61) % 620), duration: dur, ease: 'power1.out' });
+      gsap.to(b, { opacity: 0, duration: dur * 0.4, delay: dur * 0.6, ease: 'power1.in' });
+    }
+    gsap.delayedCall(2.9, function () { box.remove(); });
+  }
 
   function glPx2World() {
     /* camera z=10, fov 40: world units per CSS pixel */
@@ -585,9 +753,39 @@
   }
 
   function glTick() {
-    if (!GL.ready || !GL.need) return;
+    if (!GL.ready) return;
+    /* the pluck: the ink line is a plucked wire when little Bryan lands
+       on it — a decaying spring oscillation layered over whatever y the
+       scroll owns (GL.baseY, written by updateGL). Runs on the ticker so
+       it rings even when the scroll is parked. */
+    if (GL.pluck > 0.012) {
+      var dr = gsap.ticker.deltaRatio(60);
+      GL.pluckT += dr / 60;
+      GL.pluck *= Math.pow(0.86, dr);
+      GL.group.position.y = (GL.baseY || 0) +
+        glPx2World() * 12 * GL.pluck * Math.sin(GL.pluckT * 46);
+      GL.need = true;
+    } else if (GL.pluck) {
+      GL.pluck = 0;
+      GL.group.position.y = GL.baseY || 0;
+      GL.need = true;
+    }
+    if (!GL.need) return;
     GL.need = false;
     GL.renderer.render(GL.scene, GL.camera);
+  }
+
+  /* ring the line — only meaningful when his feet are actually on it:
+     the hero/knockdown beats, the hop stretch, the exit run + ledger
+     walk. Card touchdowns (the revolve) don't reach the line. */
+  function pluckLine(strength) {
+    if (!GL.ready) return;
+    var pp = gctx.p || 0;
+    if (pp < 40 || (pp >= 80.5 && pp < 93.5)) {
+      GL.pluck = Math.min(1, strength || 1);
+      GL.pluckT = 0;
+      GL.need = true;
+    }
   }
 
   function updateGL(p) {
@@ -613,9 +811,11 @@
     GL.group.position.x = lxWorld;
 
     /* finale: the L descends to become the rule under the sign-off;
-       the vertical remnant pours away into the corner */
+       the vertical remnant pours away into the corner. baseY is the
+       scroll-owned rest position; glTick layers the pluck over it. */
     var drop = S.lineDrop || 0;
-    GL.group.position.y = -(GL.dropPx || 0) * drop * w;
+    GL.baseY = -(GL.dropPx || 0) * drop * w;
+    GL.group.position.y = GL.baseY;
     if (drop > 0) {
       var vCount = Math.round(GL.vIndexCount * vFrac * (1 - drop));
       var vStart = Math.round(GL.vIndexCount * vFrac) - vCount;
@@ -672,6 +872,20 @@
        thresholds below are authored in these units */
     var p = master ? master.time() : 0;
     prog.style.width = (master ? master.progress() * 100 : 0) + '%';
+
+    /* Release: any real DOWNWARD movement from the armed state fires the
+       knockdown (0.45u past the lowest p seen since arming — direction-
+       aware, because re-arming now happens well above p=0). Re-arm: as
+       soon as the scroll-up crosses back into the hero zone (p < 5.5,
+       right where little Bryan's reverse journey ends at the line's
+       start) the prints rise and the beat is live again — no waiting
+       for the exact top. */
+    if (!KNOCK.done && !KNOCK.released) {
+      if (KNOCK.minP == null || p < KNOCK.minP) KNOCK.minP = p;
+      if (p > KNOCK.minP + 0.45) knockRelease();
+    } else if (KNOCK.done && KNOCK.released && p < 5.5) {
+      knockRearm();
+    }
 
     /* lines (DOM fallback path; GL owns them when html.scene.gl) */
     var lx = -S.slide * 38;
@@ -752,6 +966,10 @@
 
     end.classList.toggle('live', p > 90);
 
+    /* confetti re-arms once you've scrolled back before the flourish —
+       wide hysteresis (95 / 99.1) so scrub jitter never double-fires */
+    if (p < 95) WAVE.fired = false;
+
     /* ---- little Bryan: position + context (limbs live in guyTick) ---- */
     gctx.p = p;
     /* exact perch on the front card's top edge (matches cardTopPoint) */
@@ -777,6 +995,7 @@
       gctx.y = wy;
       gctx.visible = true;
       revealSayHi(1);                /* "Say hi." fully drawn in */
+      if (!WAVE.fired) { WAVE.fired = true; fireConfetti(); }
     } else if (p >= 80.5) {
       /* the exit: hop off the card onto the line, then RUN as the
          camera dollies onward — he holds the left third of the frame
@@ -991,6 +1210,17 @@
       gctx.frac = frac;
       gctx.y = -hop;
       gctx.visible = gop > 0.05;
+    } else if (KNOCK.hold) {
+      /* knockdown rest: he stands at the line. Pre-release he holds all
+         the way to p=6, fading out exactly as the elbow branch (p>6)
+         fades in — both are 0 at the handoff, so no position pop.
+         Post-release he rides off quickly with the startle. */
+      var ko = KNOCK.released
+        ? Math.max(0, 1 - p / 1.6)
+        : Math.max(0, Math.min(1, (6 - p) / 1.5));
+      guy.style.opacity = ko.toFixed(3);
+      gctx.visible = ko > 0.05;
+      if (!gctx.visible && KNOCK.released) { KNOCK.hold = false; gctx.mode = 'hidden'; }
     } else {
       guy.style.opacity = 0;
       gctx.mode = 'hidden';
@@ -1045,6 +1275,9 @@
        tween and Lenis never fight over the scroll position. */
     ScrollTrigger.scrollerProxy(window, {
       scrollTop: function (value) {
+        /* the proxy outlives killScene (lenis = null in flow mode);
+           fall back to native so a mid-switch call never throws */
+        if (!lenis) { if (arguments.length) scrollTo(0, value); return scrollY; }
         if (arguments.length) { lenis.scrollTo(value, { immediate: true }); return; }
         return lenis.scroll;
       },
@@ -1059,6 +1292,12 @@
     guy.classList.remove('p-stand', 'p-run', 'p-leap', 'waving');
     lastPose = '';
     gsap.ticker.add(guyTick);
+    /* the shatter guard MUST tick right after guyTick (re-added here each
+       build so it stays last even after a rebuild) — that way a heal lands
+       in the SAME frame as the bad pose, before paint, so a shatter can
+       never reach the screen even for one frame. */
+    gsap.ticker.remove(guyGuard);
+    gsap.ticker.add(guyGuard);
 
     /* ghost station numerals: a deeper parallax layer behind the text */
     var ghosts = stations.map(function (st, i) {
@@ -1299,6 +1538,276 @@
     tl.to(S, {
       grow: 1, duration: 1.1, ease: 'power2.inOut', onUpdate: renderScene
     }, 1.2);
+
+    /* 6 — the knockdown set-dressing rides alongside on its own timeline
+       (aligned to the same 0.15 delay); the entrance above never waits
+       for it. The knockdown itself waits for the first scroll. */
+    knockBuild();
+  }
+
+  /* the snapshots: existing station-ii / ledger derivatives, reused with
+     the same srcset pairs the page requests further down (shared cache).
+     Sized like the station plates — bold set-dressing filling the hero's
+     void, layered around the centered copy (which always paints above). */
+  var KNOCK_SHOTS = [
+    { src: 'photo-presenting', ww: 480, pos: 'left:4vw;top:10vh',   w: 320, r: -6.5 },
+    { src: 'photo-msft',       ww: 320, pos: 'right:5vw;top:13vh',  w: 240, r: 4 },
+    { src: 'photo-bte-group',  ww: 320, pos: 'left:8.5vw;top:39vh', w: 240, r: 3.5 },
+    /* fab and pdce are tall portraits (1.48 / 1.53 h/w) — sized so both
+       fit the fold at 720, and pdce (the suit) reads FULLY beside fab
+       instead of buried under it: fab hugs the right edge below msft;
+       pdce sits inward at 58vh with only fab's corner grazing its edge. */
+    { src: 'photo-fab',        ww: 360, pos: 'right:4.5vw;top:52vh', w: 200, r: -5.5 },
+    { src: 'photo-hackathon',  ww: 360, pos: 'left:19vw;top:63vh',  w: 230, r: -2.5 },
+    { src: 'photo-pdce',       ww: 320, pos: 'right:17vw;top:56vh', w: 230, r: -4.5 }
+  ];
+
+  function knockBuild() {
+    knockTeardown();   /* mode re-entry: never stack two runs */
+
+    /* a scene rebuild replays the entrance, photos included — that's by
+       design: the knockdown re-arms at the top anyway (see knockRearm),
+       and a rebuild mid-page releases invisibly on the next render tick. */
+    var box = document.createElement('div');
+    box.id = 'knock';
+    box.setAttribute('aria-hidden', 'true');
+    KNOCK.shots = KNOCK_SHOTS.map(function (s, i) {
+      var el = document.createElement('div');
+      el.className = 'knock-shot';
+      /* stack like leaned prints: rows nearer the top sit ABOVE lower
+         rows, so the mid-row plates are never blocked by the bottom row */
+      el.style.cssText = s.pos + ';width:' + s.w + 'px;z-index:' + (KNOCK_SHOTS.length - i);
+      var inWrap = document.createElement('div');
+      inWrap.className = 'ks-in';
+      /* desync the sways so they don't breathe in unison */
+      inWrap.style.animationDuration = (4.6 + i * 0.7) + 's';
+      inWrap.style.animationDelay = (-i * 1.3) + 's';
+      var img = document.createElement('img');
+      img.src = 'images/' + s.src + '.jpg';
+      img.srcset = 'images/' + s.src + '.jpg ' + s.ww + 'w, images/' + s.src + '-2x.jpg ' + (s.ww * 2) + 'w';
+      img.sizes = s.w + 'px';
+      img.alt = '';
+      img.decoding = 'async';
+      inWrap.appendChild(img);
+      el.appendChild(inWrap);
+      box.appendChild(el);
+      gsap.set(el, { rotation: s.r });   /* GSAP owns the outer transform */
+      return el;
+    });
+    hero.insertBefore(box, hero.firstChild);   /* under the hero copy */
+    KNOCK.box = box;
+    KNOCK.done = false;
+    KNOCK.hold = false;
+    KNOCK.armed = false;      /* true once he's landed and idling */
+    KNOCK.released = false;   /* true once the first scroll triggers it */
+    KNOCK.minP = 0;           /* release fires 0.45u past the lowest p seen */
+
+    var tl = gsap.timeline({ delay: 0.15 });
+    KNOCK.tl = tl;
+
+    /* snapshots fade in quietly with the entrance — present by ~1.3s,
+       never in front of the name (they're behind the copy in the DOM) */
+    tl.to(KNOCK.shots, { opacity: 1, duration: 0.55, ease: 'power1.out', stagger: 0.07 }, 0.7);
+
+    knockDropIn(tl);
+  }
+
+  /* THE DROP-IN — at the end of the entrance (the line finishes at
+     ~2.3s) he falls in from above the viewport, straight past the
+     name, and lands ON the visible stretch of the ink line below the
+     copy (the hero's paper gradient goes transparent from ~75vh, so
+     the line reads there). Then he just... lives there, idling among
+     the snapshots (guyTick fidgets), until the visitor scrolls.
+     Limbs ride jumpPose via gctx: airborne through the fall, then the
+     squash-stretch landing crouch. `at` shifts the whole beat (the
+     re-arm replays it almost immediately; the entrance waits for the
+     line to finish). `fromBelow` flips the arrival: on a scroll-up
+     re-arm he springs UP from below the fold with the rising prints
+     (accelerate-in reads as a fall; decelerate-out reads as a leap). */
+  function knockDropIn(tl, at, fromBelow) {
+    if (at == null) at = 2.35;
+    KNOCK.restY = Math.round(vh * 0.28);   /* feet ≈ 78vh, on the line */
+    var d = { y: fromBelow ? vh / 2 + 150 : -(vh / 2 + 110) };
+    tl.to(d, {
+      y: KNOCK.restY, duration: 0.5, ease: fromBelow ? 'power2.out' : 'power2.in',
+      onStart: function () {
+        KNOCK.hold = true;              /* renderScene keeps him visible */
+        guy.style.opacity = 1;
+        gctx.mode = 'jump';
+        gctx.visible = true;
+      },
+      onUpdate: function () {
+        guy.style.transform = 'translate(0px,' + d.y.toFixed(1) + 'px)';
+        gctx.y = d.y;                   /* scarf spring feels the fall */
+        gctx.frac = 0.45 + 0.41 * this.progress();   /* air pose, tucking */
+      }
+    }, at);
+
+    /* the landing: dust, crouch-to-stand recovery, then idle (armed) */
+    var land = { f: 0.86 };
+    tl.to(land, {
+      f: 1, duration: 0.3, ease: 'power2.out',
+      onStart: fireDust,
+      onUpdate: function () { gctx.frac = land.f; },
+      onComplete: function () {
+        gctx.mode = 'idle';
+        gctx.frac = 0;
+        KNOCK.armed = true;
+      }
+    }, at + 0.5);
+  }
+
+  /* FIRST SCROLL — the knockdown fires, on its own clock, while the
+     scroll proceeds untouched underneath: he startles (a little jump on
+     the spot — his fault, in character), the impact trembles the paper,
+     and the snapshots break loose and tumble off. A hard flick simply
+     carries the hero (and the falling shots with it, they're children)
+     up and away mid-fall — nothing ever lingers or blocks. */
+  function knockRelease() {
+    if (KNOCK.released || KNOCK.done) return;
+    KNOCK.released = true;
+    var scn = document.getElementById('scene');
+
+    /* stop the entrance-aligned timeline (pending fade/drop included) */
+    if (KNOCK.tl) { KNOCK.tl.kill(); KNOCK.tl = null; }
+    gsap.killTweensOf(KNOCK.shots);
+    gsap.set(KNOCK.shots, { opacity: 1 });
+
+    var rtl = gsap.timeline();
+    KNOCK.rtl = rtl;
+    var impactAt;
+
+    if (KNOCK.armed) {
+      /* the startled jump, in place at his rest spot */
+      var h = { f: 0 };
+      rtl.to(h, {
+        f: 1, duration: 0.5, ease: 'none',
+        onUpdate: function () {
+          if (!KNOCK.hold) return;      /* faded out: renderScene owns him */
+          gctx.mode = 'jump';
+          gctx.frac = h.f;
+          var y = KNOCK.restY - hopArc(h.f) * 26;
+          guy.style.transform = 'translate(0px,' + y.toFixed(1) + 'px)';
+          gctx.y = y;
+        },
+        onComplete: function () {
+          if (KNOCK.hold) { gctx.mode = 'idle'; gctx.frac = 0; }
+        }
+      }, 0);
+      impactAt = 0.44;                  /* his touchdown */
+    } else {
+      /* scrolled before he ever landed: skip the personality beat, the
+         shake just happens; if he was mid-air, park him at his spot */
+      if (KNOCK.hold) {
+        guy.style.transform = 'translate(0px,' + KNOCK.restY + 'px)';
+        gctx.mode = 'idle';
+        gctx.frac = 0;
+        gctx.y = KNOCK.restY;
+      }
+      impactAt = 0.05;
+    }
+
+    rtl.call(fireDust, null, impactAt);
+
+    /* screen tremble: ~350ms of decaying jitter. x+y on the scene layer
+       (line, GL); x-ONLY on the hero, because the master timeline owns
+       hero.y once the scroll moves. Nav and progress bar sit outside
+       both. Ends exactly at zero. */
+    var tr = { t: 0 };
+    rtl.to(tr, {
+      t: 1, duration: 0.42, ease: 'none',
+      onUpdate: function () {
+        var k = (1 - tr.t) * (1 - tr.t);   /* fast decay: bigger thud, still not woozy */
+        gsap.set(scn, {
+          x: Math.sin(tr.t * 43) * 8 * k,
+          y: Math.cos(tr.t * 31) * 5.5 * k
+        });
+        gsap.set(hero, { x: Math.sin(tr.t * 47) * 6 * k });
+      }
+    }, impactAt);
+
+    /* the snapshots break loose — now they get KNOCKED OUTWARD, not just
+       dropped: wide horizontal scatter, a full tumble, gravity-ish fall
+       off the bottom, tighter 55ms stagger so it reads as one big burst.
+       On their own clock, so a paused scroll never strands them mid-air. */
+    KNOCK.shots.forEach(function (el, i) {
+      var side = i % 2 ? 1 : -1;
+      rtl.to(el, {
+        y: '+=' + (vh + 520),
+        x: '+=' + (side * (150 + (i * 73) % 240)),        /* fly outward, not just down */
+        rotation: '+=' + (side * (210 + (i * 97) % 320)), /* a real tumble */
+        duration: 0.82 + ((i * 47) % 5) * 0.06,
+        ease: 'power2.in'
+      }, impactAt + 0.04 + i * 0.055);
+    });
+
+    rtl.call(function () { knockDone(); });
+  }
+
+  function knockDone() {
+    if (KNOCK.done) return;
+    KNOCK.done = true;
+    if (KNOCK.rtl) { KNOCK.rtl.kill(); KNOCK.rtl = null; }
+    if (KNOCK.box) KNOCK.box.style.display = 'none';
+    var scn = document.getElementById('scene');
+    gsap.set(scn, { x: 0, y: 0 });
+    gsap.set(hero, { x: 0 });
+  }
+
+  /* BACK AT THE TOP after a knockdown: the prints RISE back up from
+     below the fold onto their pins (the fall, rewound) and he drops
+     back in — so the next scroll down knocks it all over again. A short
+     settle debounce keeps snap-back inertia wiggling across the
+     threshold from releasing a half-restored set. */
+  function knockRearm() {
+    if (KNOCK.rearmQ) return;
+    KNOCK.rearmQ = true;
+    gsap.delayedCall(0.05, function () {
+      KNOCK.rearmQ = false;
+      var pp = master ? master.time() : 0;
+      if (!inScene() || !KNOCK.box || !KNOCK.done || !KNOCK.released || pp >= 5.5) return;
+      if (KNOCK.rtl) { KNOCK.rtl.kill(); KNOCK.rtl = null; }
+      KNOCK.box.style.display = '';
+      /* was he still standing there (gentle knockdown, never scrolled
+         far)? Then no re-drop — the prints just rise back around him */
+      var himThere = KNOCK.hold && gctx.visible;
+      KNOCK.armed = false;
+      KNOCK.released = false;
+      KNOCK.minP = pp;
+      var tl = gsap.timeline();
+      KNOCK.tl = tl;
+      /* they're still where the fall left them (below the fold, tumbled);
+         guarantee a from-below start, then decelerate up onto the pins,
+         un-tumbling en route */
+      KNOCK.shots.forEach(function (el, i) {
+        if (+gsap.getProperty(el, 'y') < vh * 0.5) gsap.set(el, { y: vh + 320 });
+        gsap.set(el, { opacity: 1 });
+        tl.to(el, {
+          x: 0, y: 0, rotation: KNOCK_SHOTS[i].r,
+          duration: 0.35, ease: 'power3.out'
+        }, i * 0.03);
+      });
+      if (himThere) KNOCK.armed = true;
+      else { KNOCK.hold = false; knockDropIn(tl, 0.1, true); }   /* rises with the prints */
+      KNOCK.done = false;   /* re-armed: the release trigger is live again */
+    });
+  }
+
+  function knockTeardown() {
+    KNOCK.done = true;
+    KNOCK.hold = false;
+    KNOCK.armed = false;
+    KNOCK.released = false;
+    KNOCK.rearmQ = false;
+    KNOCK.minP = 0;
+    if (KNOCK.tl) { KNOCK.tl.kill(); KNOCK.tl = null; }
+    if (KNOCK.rtl) { KNOCK.rtl.kill(); KNOCK.rtl = null; }
+    if (KNOCK.box) { KNOCK.box.remove(); KNOCK.box = null; }
+    KNOCK.shots = [];
+    if (window.gsap) {
+      var scn = document.getElementById('scene');
+      if (scn) gsap.set([hero, scn], { x: 0, y: 0 });
+    }
   }
 
   function hintIdleStart(hint) {
@@ -1340,16 +1849,24 @@
 
   function killScene() {
     hintIdleCleanup();
+    knockTeardown();
     if (onSceneMouse) {
       removeEventListener('mousemove', onSceneMouse);
       onSceneMouse = null;
     }
-    if (window.gsap) gsap.ticker.remove(guyTick);
+    if (window.gsap) { gsap.ticker.remove(guyTick); gsap.ticker.remove(guyGuard); }
     killFidget(false);
     if (CHAR.ready) {
       gsap.set(Object.keys(CHAR.el).map(function (k) { return CHAR.el[k]; }),
         { clearProps: 'all' });
       CHAR.scarfA = 0; CHAR.scarfV = 0;
+      /* clearProps wipes gsap's cached svgOrigin transforms on every limb.
+         Mark the rig un-inited so the NEXT buildScene's initChar() re-runs
+         in full (re-establishing those origins + resetting motion state) —
+         otherwise it early-returns on CHAR.ready and the limbs pivot around
+         the wrong points: little Bryan comes back discombobulated after a
+         scene → flow → scene round trip (e.g. resizing across the width). */
+      CHAR.ready = false;
     }
     gctx.mode = 'hidden';
     killGL();
@@ -1399,9 +1916,10 @@
   }
 
   addEventListener('scroll', function () {
-    if (inScene() || ticking) return;
-    ticking = true;
-    requestAnimationFrame(flowFrame);
+    if (inScene()) return;
+    if (!ticking) { ticking = true; requestAnimationFrame(flowFrame); }
+    /* wake the damped follow so little Bryan tracks the scroll */
+    if (flowFollow) { flowFollow.scrollT = performance.now(); flowKick(); }
   }, { passive: true });
 
   addEventListener('resize', function () {
@@ -1442,9 +1960,21 @@
   motionQ.addEventListener('change', setMode);
   wideQ.addEventListener('change', setMode);
 
-  /* ---------- flow-mode little Bryan (unchanged from v3) ---------- */
+  /* ---------- flow-mode little Bryan: damped follow down the spine ----
+     v4 rewrite. The old build used an IntersectionObserver to re-aim him
+     at whatever stop crossed a band, then a springy CSS transition chased
+     each target. On a phone a fast scroll fired many re-aims at once
+     (IO batches them, NOT in spatial order) and the overshoot ease made
+     him "zoom" up and down. Now a single rAF lerp damps his transform
+     toward the ONE nearest dock — a focus line ~45% down the viewport —
+     so it's order-independent, overshoot-free, and reverses cleanly:
+     he runs down the spine while you scroll and settles on each stop.
 
-  var flowGuyIO = null;
+     Poses stay CSS-class driven in flow (see #guy.p-* in style.css); we
+     deliberately DON'T call initChar()/gsap here — its per-limb inline
+     transforms would override those class poses and freeze him. */
+
+  var flowFollow = null;
 
   function guyDockPoint(el) {
     var r = el.getBoundingClientRect();
@@ -1457,28 +1987,82 @@
     return { x: r.left + beforeLeft + 7 + scrollX, y: r.top + 35 + scrollY };
   }
 
-  function moveFlowGuyTo(el, wave) {
-    var p;
+  /* the guy transform (page coords) that docks him at el, the page-y used
+     to pick the active stop, and whether he waves there */
+  function flowDock(el) {
     if (el.id === 'contact-title') {
       var r = el.getBoundingClientRect();
-      p = { x: r.left + scrollX + 10, y: r.top + scrollY - 8 };
-      guy.style.transform =
-        'translate(' + (p.x) + 'px,' + (p.y - 50) + 'px)';
-    } else {
-      p = guyDockPoint(el);
-      guy.style.transform =
-        'translate(' + (p.x - 19) + 'px,' + (p.y - 48) + 'px)';
+      var x = r.left + scrollX, y = r.top + scrollY;
+      return { tx: x + 10, ty: y - 58, y: y, wave: true };
     }
-    setPose(wave ? 'stand' : 'leap', !!wave);
-    if (!wave) {
-      clearTimeout(moveFlowGuyTo._t);
-      moveFlowGuyTo._t = setTimeout(function () { setPose('stand', false); }, 650);
+    var p = guyDockPoint(el);
+    return { tx: p.x - 19, ty: p.y - 48, y: p.y, wave: false };
+  }
+
+  function buildFlowDocks() {
+    /* every spine stop, top to bottom: stations, work cards, AND the
+       ledger rows (they ride the same left spine in flow — without them
+       he'd have nothing to stand on across #also and would slide the
+       whole section in one lurch), then the sign-off */
+    var els = stations.concat(cards).concat(alsoRows);
+    var title = document.getElementById('contact-title');
+    if (title) els.push(title);
+    return els.map(flowDock).sort(function (a, b) { return a.y - b.y; });
+  }
+
+  /* nearest dock to a focus line ~45% down the viewport (page coords) */
+  function flowActive(f) {
+    var focus = scrollY + vh * 0.45;
+    var best = 0, bd = Infinity;
+    for (var i = 0; i < f.docks.length; i++) {
+      var d = Math.abs(f.docks[i].y - focus);
+      if (d < bd) { bd = d; best = i; }
+    }
+    return best;
+  }
+
+  function flowGuyTick(now) {
+    var f = flowFollow;
+    if (!f) return;
+    f.raf = 0;
+    var dt = f.lastT ? Math.min(64, now - f.lastT) : 16.7;
+    f.lastT = now;
+
+    f.active = flowActive(f);
+    var t = f.docks[f.active];
+    /* frame-rate-independent damping (~0.18 of the gap per 16.7ms) */
+    var k = 1 - Math.pow(1 - 0.18, dt / 16.7);
+    var sx = (t.tx - f.cx) * k, sy = (t.ty - f.cy) * k;
+    /* speed ceiling (~55px per 16.7ms): across any wide gap he RUNS down
+       smoothly instead of teleporting in the first frame */
+    var maxStep = 55 * dt / 16.7;
+    var mag = Math.sqrt(sx * sx + sy * sy);
+    if (mag > maxStep) { var sc = maxStep / mag; sx *= sc; sy *= sc; }
+    f.cx += sx;
+    f.cy += sy;
+    guy.style.transform = 'translate(' + f.cx.toFixed(1) + 'px,' + f.cy.toFixed(1) + 'px)';
+
+    var dist = Math.abs(t.tx - f.cx) + Math.abs(t.ty - f.cy);
+    if (t.wave && dist < 4) setPose('stand', true);
+    else if (dist > 3) setPose('run', false);
+    else setPose('stand', false);
+
+    /* keep ticking while moving or just-scrolled; then rest (no idle rAF) */
+    if (dist > 0.5 || now - f.scrollT < 140) {
+      f.raf = requestAnimationFrame(flowGuyTick);
+    } else {
+      f.lastT = 0;
     }
   }
 
+  function flowKick() {
+    if (flowFollow && !flowFollow.raf) flowFollow.raf = requestAnimationFrame(flowGuyTick);
+  }
+
   function teardownFlowGuy() {
-    if (flowGuyIO) { flowGuyIO.disconnect(); flowGuyIO = null; }
-    guy.classList.remove('flow-guy', 'hopping', 'p-stand', 'p-run', 'p-leap', 'waving');
+    if (flowFollow && flowFollow.raf) cancelAnimationFrame(flowFollow.raf);
+    flowFollow = null;
+    guy.classList.remove('flow-guy', 'p-stand', 'p-run', 'p-leap', 'waving');
     lastPose = '';
     guy.removeAttribute('style');
   }
@@ -1488,43 +2072,25 @@
     if (inScene()) return;
 
     var title = document.getElementById('contact-title');
+    guy.classList.add('flow-guy');
+    guy.style.opacity = 1;
 
+    /* reduced motion: park at the sign-off, waving, no scroll-follow */
     if (!motionQ.matches) {
-      guy.classList.add('flow-guy');
-      moveFlowGuyTo(title, true);
-      guy.style.opacity = 1;
+      var d = flowDock(title);
+      guy.style.transform = 'translate(' + d.tx + 'px,' + d.ty + 'px)';
+      setPose('stand', true);
       return;
     }
 
-    guy.classList.add('flow-guy');
-    var stops = stations.concat(cards);
-    var first = true;
-
-    moveFlowGuyTo(stations[0], false);
-    setPose('stand', false);
-    guy.style.opacity = 1;
-
-    flowGuyIO = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) {
-        if (!e.isIntersecting) return;
-        if (first) { first = false; guy.classList.add('hopping'); }
-        moveFlowGuyTo(e.target, e.target === title);
-      });
-    }, { rootMargin: '-35% 0px -45% 0px' });
-
-    stops.forEach(function (el) { flowGuyIO.observe(el); });
-    flowGuyIO.observe(title);
+    flowFollow = { docks: buildFlowDocks(), active: 0, cx: 0, cy: 0, raf: 0, lastT: 0, scrollT: 0 };
+    /* snap onto the currently-active stop so there's no cross-page lerp on load */
+    flowFollow.active = flowActive(flowFollow);
+    var t0 = flowFollow.docks[flowFollow.active];
+    flowFollow.cx = t0.tx; flowFollow.cy = t0.ty;
+    guy.style.transform = 'translate(' + t0.tx + 'px,' + t0.ty + 'px)';
+    setPose('stand', !!t0.wave);
   }
-
-  /* landing beat on mobile hops: squash + dust (once; needs GSAP, else skip) */
-  guy.addEventListener('transitionend', function (ev) {
-    if (ev.propertyName !== 'transform' || inScene()) return;
-    if (!window.gsap || !motionQ.matches) return;
-    initChar();
-    fireDust();
-    gsap.fromTo('#rig', { scaleY: 0.88, svgOrigin: '20 48' },
-      { scaleY: 1, duration: 0.35, ease: 'back.out(3)' });
-  });
 
   /* ---------- palette bridge ---------- */
 
@@ -1567,6 +2133,12 @@
   measure();
   if (inScene()) buildScene();
   syncFlowGuy();
+
+  /* the shatter guard is registered/removed with the scene rig inside
+     buildScene/killScene (right after guyTick, so it always ticks last).
+     Flow poses are static CSS classes and can't come apart, so they need
+     no guard. */
+  if (GUY_DEBUG) window.__guy = { drift: guyDrift, max: function () { return guyMaxDrift; }, heal: healGuy };
 })();
 
 /* ============================================================

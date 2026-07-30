@@ -99,6 +99,14 @@ img, svg { max-width: 100%; }
 
 .js .js-only { display: inline-block; }
 
+/* the Ctrl/Cmd+K chip advertises a keyboard shortcut — meaningless on a
+   touch device, so hide it where the primary pointer is coarse and there
+   is no hover (phones/tablets). The palette keydown still works for
+   anyone with a real keyboard; they just don't see the hint. */
+@media (hover: none) and (pointer: coarse) {
+  #pal-btn { display: none; }
+}
+
 /* ---------- 2. Nav & progress ---------- */
 
 nav {
@@ -847,6 +855,41 @@ html.scene .hero {
     var(--paper) 0%, var(--paper) 70%, transparent 84%);
 }
 
+/* hero knockdown snapshots (scene mode only; JS builds and removes them).
+   Bold set-dressing at station-plate scale filling the hero's void —
+   paper borders, slight tilts, subtle idle sway — with little Bryan
+   idling among them after the entrance. The visitor's FIRST scroll
+   startles him; his stomp shakes them loose and they tumble off-screen
+   (see knockdown in script.js). They're the SAME photos found later at
+   station ii and the ledger. Decorative: aria-hidden, absolute in the
+   fixed hero, zero CLS. Reduced motion and flow mode never build them. */
+#knock {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* the fixed hero is a stacking context, so -1 paints the shots ABOVE
+     its paper gradient but BELOW its (static) copy — the name always
+     wins if a snapshot ever drifts under it at narrow scene widths */
+  z-index: -1;
+}
+.knock-shot {
+  position: absolute;
+  background: var(--paper);
+  padding: 6px 6px 20px;
+  border: 1px solid rgba(14, 22, 17, 0.16);
+  box-shadow: 0 4px 18px rgba(14, 22, 17, 0.14);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.knock-shot img { display: block; width: 100%; height: auto; filter: saturate(0.94); }
+/* very subtle idle sway on an INNER wrapper, so the CSS animation never
+   fights GSAP's transform on the outer (tilt + the fall tween) */
+.knock-shot .ks-in { animation: ksSway 5.5s ease-in-out infinite alternate; }
+@keyframes ksSway {
+  from { transform: rotate(-0.5deg); }
+  to   { transform: rotate(0.5deg); }
+}
+
 /* scroll hint: hidden on load; fades in after 4 s of idle (JS adds
    .hint-idle), then fades out permanently on first scroll (.hint-gone).
    Failsafe: with no gsap-ready, it appears after a CSS delay so a slow
@@ -856,7 +899,9 @@ html.scene .hero .hint { display: block; }
 html.scene:not(.gsap-ready) .hero .hint { opacity: 0; animation: pulse 2.2s ease-in-out 4s infinite; }
 html.scene.gsap-ready .hero .hint { opacity: 0; }
 html.scene.gsap-ready .hero .hint.hint-idle { opacity: 1; transition: opacity 0.7s ease; animation: pulse 2.2s ease-in-out infinite; }
-html.scene.gsap-ready .hero .hint.hint-gone  { opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
+/* animation:none — else .hint-idle's pulse keeps animating opacity and
+   overrides the 0 (animations beat static values), so it never left */
+html.scene.gsap-ready .hero .hint.hint-gone  { opacity: 0; transition: opacity 0.3s ease; pointer-events: none; animation: none; }
 
 /* hero reveal is GSAP-owned in scene mode; CSS just hides the lines
    until the character stagger takes over (no flash before JS runs).
@@ -978,6 +1023,18 @@ html.scene #ring {
 }
 
 html.scene #ring .card { opacity: 0; } /* pre-first-frame state */
+
+/* paper-lift hover: the card rises off the paper a touch and its hard
+   offset shadow deepens, like lifting a print off the desk. Uses the
+   INDEPENDENT translate property so it composes with (never fights)
+   the GSAP-owned transform that places cards on the ring. */
+html.scene #ring .card {
+  transition: translate 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2), box-shadow 0.28s ease;
+}
+html.scene #ring .card:hover {
+  translate: 0 -6px;
+  box-shadow: 14px 16px 0 rgba(14, 22, 17, 0.16);
+}
 
 html.scene #ring .card {
   position: absolute;
@@ -1284,7 +1341,9 @@ body { position: relative; } /* anchor for flow-mode little Bryan */
   will-change: transform;
 }
 
-/* flow mode: little Bryan hops down the timeline (JS positions him) */
+/* flow mode: little Bryan follows the timeline (JS damps his transform
+   per frame — see flowGuyTick — so no CSS transition here; one would
+   fight the rAF writes and reintroduce the overshoot jitter) */
 #guy.flow-guy {
   display: block;
   position: absolute;
@@ -1292,10 +1351,6 @@ body { position: relative; } /* anchor for flow-mode little Bryan */
   top: 0;
   z-index: 9;
   pointer-events: none;
-}
-
-#guy.flow-guy.hopping {
-  transition: transform 0.65s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* finale: the sign-off link is drawn in by a clip that tracks little
@@ -1398,6 +1453,20 @@ html.scene #guy {
   box-shadow: 10px 10px 0 rgba(14, 22, 17, 0.18);
 }
 
+/* letterpress stamp-down on open: the palette presses into the paper —
+   starts slightly raised (bigger, deeper shadow, faint) and stamps to
+   rest. Pure CSS; reduced motion's global animation kill flattens it. */
+#palette:not([hidden]) #palette-box {
+  animation: palStamp 0.26s cubic-bezier(0.2, 1.2, 0.35, 1);
+}
+@keyframes palStamp {
+  from {
+    transform: scale(1.07) rotate(0.4deg);
+    box-shadow: 22px 24px 0 rgba(14, 22, 17, 0.1);
+    opacity: 0.6;
+  }
+}
+
 #palette-close {
   position: absolute;
   top: 0;
@@ -1475,6 +1544,16 @@ html.scene #guy {
   to { transform: rotate(-140deg); }
 }
 
+/* debug: the shatter guard (?debug) freezes the broken frame and marks it
+   so it's obvious in a screenshot / devtools; never applied in production */
+html.debug-frozen #guy { outline: 2px solid red; outline-offset: 4px; }
+html.debug-frozen::after {
+  content: "GUY SHATTER — frozen (see console)";
+  position: fixed; top: 8px; left: 50%; transform: translateX(-50%);
+  z-index: 999; background: #b00; color: #fff; font: 600 12px/1 monospace;
+  padding: 6px 10px; letter-spacing: .04em;
+}
+
 /* Belt & suspenders: if the UA prefers reduced motion, kill all
    animation even if a stale .scene class ever slipped through. */
 @media (prefers-reduced-motion: reduce) {
@@ -1487,7 +1566,30 @@ html.scene #guy {
 
 /* ---------- 12. Flow-mode small screens ---------- */
 
-@media (max-width: 759px) {
+/* FLOW layout (narrow windows / tablets / phones — everything below the
+   scene breakpoint, paired with wideQ min-width:1000 in script.js). */
+@media (max-width: 1279px) {
+  /* HERO: a left-aligned masthead that IS the head of the timeline. The
+     line no longer floats centered — it drops from under the copy down
+     the LEFT edge at the spine's exact x (4vw + 8px) and meets #story's
+     spine with no gap (hero padding-bottom: 0), one continuous stroke.
+     The hero shares the SAME centered 680px column as #story/#work/#also
+     so their spines line up at every width (below 680 all four are just
+     full-width, so phone layout is unchanged). Bolder type fills it. */
+  .hero {
+    align-items: flex-start;
+    text-align: left;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 7vh 4vw 0 calc(4vw + 34px);
+  }
+  .hero h1 { font-size: clamp(56px, 18vw, 96px); }
+  .hero::after {
+    height: 15vh;
+    margin: 5vh 0 0 -26px;   /* -26px: content-left (4vw+34) → spine (4vw+8) */
+    flex: 0 0 auto;
+  }
+
   #story, #work, #also { padding-left: calc(4vw + 34px); }
   #story::before, #work::before, #also::before { left: calc(4vw + 8px); }
   .station .dot { left: -31px; }
