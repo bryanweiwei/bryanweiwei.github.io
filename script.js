@@ -762,11 +762,19 @@
     var p = master ? master.time() : 0;
     prog.style.width = (master ? master.progress() * 100 : 0) + '%';
 
-    /* the first real scroll movement fires the knockdown (own clock;
-       the scroll itself proceeds untouched underneath); settling back
-       at the top re-arms it so the whole beat replays */
-    if (!KNOCK.done && !KNOCK.released && p > 0.02) knockRelease();
-    else if (KNOCK.done && KNOCK.released && p <= 0.02) knockRearm();
+    /* Release: any real DOWNWARD movement from the armed state fires the
+       knockdown (0.45u past the lowest p seen since arming — direction-
+       aware, because re-arming now happens well above p=0). Re-arm: as
+       soon as the scroll-up crosses back into the hero zone (p < 5.5,
+       right where little Bryan's reverse journey ends at the line's
+       start) the prints rise and the beat is live again — no waiting
+       for the exact top. */
+    if (!KNOCK.done && !KNOCK.released) {
+      if (KNOCK.minP == null || p < KNOCK.minP) KNOCK.minP = p;
+      if (p > KNOCK.minP + 0.45) knockRelease();
+    } else if (KNOCK.done && KNOCK.released && p < 5.5) {
+      knockRearm();
+    }
 
     /* lines (DOM fallback path; GL owns them when html.scene.gl) */
     var lx = -S.slide * 38;
@@ -1092,13 +1100,16 @@
       gctx.y = -hop;
       gctx.visible = gop > 0.05;
     } else if (KNOCK.hold) {
-      /* post-knockdown rest: he stands at the line until the scroll takes
-         over, fading with the hero lift — a one-shot; once gone, the top
-         of the page is exactly today's clean state */
-      var ko = Math.max(0, 1 - p / 1.4);
+      /* knockdown rest: he stands at the line. Pre-release he holds all
+         the way to p=6, fading out exactly as the elbow branch (p>6)
+         fades in — both are 0 at the handoff, so no position pop.
+         Post-release he rides off quickly with the startle. */
+      var ko = KNOCK.released
+        ? Math.max(0, 1 - p / 1.6)
+        : Math.max(0, Math.min(1, (6 - p) / 1.5));
       guy.style.opacity = ko.toFixed(3);
       gctx.visible = ko > 0.05;
-      if (!gctx.visible) { KNOCK.hold = false; gctx.mode = 'hidden'; }
+      if (!gctx.visible && KNOCK.released) { KNOCK.hold = false; gctx.mode = 'hidden'; }
     } else {
       guy.style.opacity = 0;
       gctx.mode = 'hidden';
@@ -1472,6 +1483,7 @@
     KNOCK.hold = false;
     KNOCK.armed = false;      /* true once he's landed and idling */
     KNOCK.released = false;   /* true once the first scroll triggers it */
+    KNOCK.minP = 0;           /* release fires 0.45u past the lowest p seen */
 
     var tl = gsap.timeline({ delay: 0.15 });
     KNOCK.tl = tl;
@@ -1632,12 +1644,15 @@
     gsap.delayedCall(0.05, function () {
       KNOCK.rearmQ = false;
       var pp = master ? master.time() : 0;
-      if (!inScene() || !KNOCK.box || !KNOCK.done || !KNOCK.released || pp > 0.02) return;
+      if (!inScene() || !KNOCK.box || !KNOCK.done || !KNOCK.released || pp >= 5.5) return;
       if (KNOCK.rtl) { KNOCK.rtl.kill(); KNOCK.rtl = null; }
       KNOCK.box.style.display = '';
-      KNOCK.hold = false;
+      /* was he still standing there (gentle knockdown, never scrolled
+         far)? Then no re-drop — the prints just rise back around him */
+      var himThere = KNOCK.hold && gctx.visible;
       KNOCK.armed = false;
       KNOCK.released = false;
+      KNOCK.minP = pp;
       var tl = gsap.timeline();
       KNOCK.tl = tl;
       /* they're still where the fall left them (below the fold, tumbled);
@@ -1651,7 +1666,8 @@
           duration: 0.35, ease: 'power3.out'
         }, i * 0.03);
       });
-      knockDropIn(tl, 0.1);
+      if (himThere) KNOCK.armed = true;
+      else { KNOCK.hold = false; knockDropIn(tl, 0.1); }
       KNOCK.done = false;   /* re-armed: the release trigger is live again */
     });
   }
@@ -1662,6 +1678,7 @@
     KNOCK.armed = false;
     KNOCK.released = false;
     KNOCK.rearmQ = false;
+    KNOCK.minP = 0;
     if (KNOCK.tl) { KNOCK.tl.kill(); KNOCK.tl = null; }
     if (KNOCK.rtl) { KNOCK.rtl.kill(); KNOCK.rtl = null; }
     if (KNOCK.box) { KNOCK.box.remove(); KNOCK.box = null; }
