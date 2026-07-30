@@ -279,6 +279,7 @@
         { opacity: 0.55, scale: 0.3, x: 0, y: 0, svgOrigin: '20 48' },
         { opacity: 0, scale: 1.1, x: (i - 1) * 5, y: -2, duration: 0.45, ease: 'power2.out', overwrite: true });
     });
+    pluckLine(1);   /* his weight rings the line (no-op off the line) */
   }
 
   function killFidget(fast) {
@@ -457,6 +458,52 @@
      honors it below p≈1.4, one-shot). done: sequence finished/aborted. */
   var KNOCK = { tl: null, box: null, shots: [], hold: false, done: true };
 
+  /* ---------- wave confetti: paper scraps at the sign-off ----------
+     When little Bryan lands his flip and starts waving, a handful of
+     cut-paper bits burst from him — the same palette as the page, like
+     offcuts from the photo prints he knocked down. One-shot per arrival
+     (re-arms if you scroll back past the flourish), scene mode only. */
+  var WAVE = { fired: false };
+
+  function fireConfetti() {
+    var r = guy.getBoundingClientRect();
+    var cx = r.left + r.width / 2, cy = r.top + r.height * 0.4;
+    var colors = ['#41b06e', '#0e1611', '#dff0e5', '#2c7a4a', '#f4f9f5'];
+    var box = document.createElement('div');
+    box.setAttribute('aria-hidden', 'true');
+    box.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9';
+    document.body.appendChild(box);
+    for (var i = 0; i < 14; i++) {
+      var b = document.createElement('div');
+      var sq = i % 3 === 0;   /* mix of squares and little strips */
+      b.style.cssText = 'position:absolute;left:' + cx + 'px;top:' + cy + 'px;' +
+        'width:' + (sq ? 7 : 5) + 'px;height:' + (sq ? 7 : 11) + 'px;' +
+        'background:' + colors[i % colors.length] + ';' +
+        (i % 5 === 4 ? 'border:1px solid rgba(14,22,17,.25);' : '');
+      box.appendChild(b);
+      var a = (i / 14) * Math.PI * 2 + (i % 3) * 0.35;   /* spread, desynced */
+      var dist = 46 + (i * 37) % 52;
+      gsap.to(b, {
+        x: Math.cos(a) * dist * 1.5,
+        duration: 1.05 + (i % 4) * 0.12,
+        ease: 'power1.out'
+      });
+      gsap.to(b, {
+        y: 150 + (i * 23) % 60,
+        duration: 1.05 + (i % 4) * 0.12,
+        ease: 'back.in(' + (1.6 + (i % 3) * 0.5) + ')',   /* up, then gravity */
+        delay: (i % 5) * 0.02
+      });
+      gsap.to(b, {
+        rotation: ((i % 2 ? 1 : -1) * (200 + (i * 61) % 260)),
+        opacity: 0,
+        duration: 1.05 + (i % 4) * 0.12,
+        ease: 'power1.in'
+      });
+    }
+    gsap.delayedCall(1.7, function () { box.remove(); });
+  }
+
   function glPx2World() {
     /* camera z=10, fov 40: world units per CSS pixel */
     return (2 * 10 * Math.tan(20 * Math.PI / 180)) / vh;
@@ -595,9 +642,39 @@
   }
 
   function glTick() {
-    if (!GL.ready || !GL.need) return;
+    if (!GL.ready) return;
+    /* the pluck: the ink line is a plucked wire when little Bryan lands
+       on it — a decaying spring oscillation layered over whatever y the
+       scroll owns (GL.baseY, written by updateGL). Runs on the ticker so
+       it rings even when the scroll is parked. */
+    if (GL.pluck > 0.012) {
+      var dr = gsap.ticker.deltaRatio(60);
+      GL.pluckT += dr / 60;
+      GL.pluck *= Math.pow(0.86, dr);
+      GL.group.position.y = (GL.baseY || 0) +
+        glPx2World() * 7 * GL.pluck * Math.sin(GL.pluckT * 46);
+      GL.need = true;
+    } else if (GL.pluck) {
+      GL.pluck = 0;
+      GL.group.position.y = GL.baseY || 0;
+      GL.need = true;
+    }
+    if (!GL.need) return;
     GL.need = false;
     GL.renderer.render(GL.scene, GL.camera);
+  }
+
+  /* ring the line — only meaningful when his feet are actually on it:
+     the hero/knockdown beats, the hop stretch, the exit run + ledger
+     walk. Card touchdowns (the revolve) don't reach the line. */
+  function pluckLine(strength) {
+    if (!GL.ready) return;
+    var pp = gctx.p || 0;
+    if (pp < 40 || (pp >= 80.5 && pp < 93.5)) {
+      GL.pluck = Math.min(1, strength || 1);
+      GL.pluckT = 0;
+      GL.need = true;
+    }
   }
 
   function updateGL(p) {
@@ -623,9 +700,11 @@
     GL.group.position.x = lxWorld;
 
     /* finale: the L descends to become the rule under the sign-off;
-       the vertical remnant pours away into the corner */
+       the vertical remnant pours away into the corner. baseY is the
+       scroll-owned rest position; glTick layers the pluck over it. */
     var drop = S.lineDrop || 0;
-    GL.group.position.y = -(GL.dropPx || 0) * drop * w;
+    GL.baseY = -(GL.dropPx || 0) * drop * w;
+    GL.group.position.y = GL.baseY;
     if (drop > 0) {
       var vCount = Math.round(GL.vIndexCount * vFrac * (1 - drop));
       var vStart = Math.round(GL.vIndexCount * vFrac) - vCount;
@@ -766,6 +845,10 @@
 
     end.classList.toggle('live', p > 90);
 
+    /* confetti re-arms once you've scrolled back before the flourish —
+       wide hysteresis (95 / 99.1) so scrub jitter never double-fires */
+    if (p < 95) WAVE.fired = false;
+
     /* ---- little Bryan: position + context (limbs live in guyTick) ---- */
     gctx.p = p;
     /* exact perch on the front card's top edge (matches cardTopPoint) */
@@ -791,6 +874,7 @@
       gctx.y = wy;
       gctx.visible = true;
       revealSayHi(1);                /* "Say hi." fully drawn in */
+      if (!WAVE.fired) { WAVE.fired = true; fireConfetti(); }
     } else if (p >= 80.5) {
       /* the exit: hop off the card onto the line, then RUN as the
          camera dollies onward — he holds the left third of the frame

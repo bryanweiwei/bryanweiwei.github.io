@@ -1016,6 +1016,18 @@ html.scene #ring {
 
 html.scene #ring .card { opacity: 0; } /* pre-first-frame state */
 
+/* paper-lift hover: the card rises off the paper a touch and its hard
+   offset shadow deepens, like lifting a print off the desk. Uses the
+   INDEPENDENT translate property so it composes with (never fights)
+   the GSAP-owned transform that places cards on the ring. */
+html.scene #ring .card {
+  transition: translate 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2), box-shadow 0.28s ease;
+}
+html.scene #ring .card:hover {
+  translate: 0 -6px;
+  box-shadow: 14px 16px 0 rgba(14, 22, 17, 0.16);
+}
+
 html.scene #ring .card {
   position: absolute;
   width: 420px;
@@ -1433,6 +1445,20 @@ html.scene #guy {
   background: var(--paper);
   border: 2px solid var(--ink);
   box-shadow: 10px 10px 0 rgba(14, 22, 17, 0.18);
+}
+
+/* letterpress stamp-down on open: the palette presses into the paper —
+   starts slightly raised (bigger, deeper shadow, faint) and stamps to
+   rest. Pure CSS; reduced motion's global animation kill flattens it. */
+#palette:not([hidden]) #palette-box {
+  animation: palStamp 0.26s cubic-bezier(0.2, 1.2, 0.35, 1);
+}
+@keyframes palStamp {
+  from {
+    transform: scale(1.07) rotate(0.4deg);
+    box-shadow: 22px 24px 0 rgba(14, 22, 17, 0.1);
+    opacity: 0.6;
+  }
 }
 
 #palette-close {
