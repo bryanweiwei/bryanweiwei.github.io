@@ -916,6 +916,19 @@ html.scene .hero {
 }
 .mknock-shot img { display: block; width: 100%; height: auto; filter: saturate(0.94); }
 
+/* Tier 4: scroll-reveal lift-settle (flow only; JS toggles .revealed as
+   blocks scroll into view). Scoped to :not(.scene) so it never touches the
+   scene's 3D-ring cards. Reduced motion never gets the class (JS gates),
+   and the global reduced-motion rule zeroes the transition anyway. */
+html:not(.scene) .flow-reveal {
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+  will-change: opacity, transform;
+}
+html:not(.scene) .flow-reveal:not(.revealed) {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
 /* scroll hint: hidden on load; fades in after 4 s of idle (JS adds
    .hint-idle), then fades out permanently on first scroll (.hint-gone).
    Failsafe: with no gsap-ready, it appears after a CSS delay so a slow

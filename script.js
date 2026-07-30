@@ -2281,8 +2281,38 @@
     MKNOCK.shots = [];
   }
 
+  /* ---------- Tier 4: scroll-reveal lift-settle (flow only) ----------
+     Cards/stations/ledger rows fade + rise a touch as they scroll into
+     view — the touch-friendly analogue of the desktop hover-lift. Pure
+     IntersectionObserver + CSS transition (see html:not(.scene) .flow-reveal
+     in style.css, scoped away from scene so it never fights the 3D ring).
+     Above-the-fold blocks reveal instantly (no flash); reduced motion and
+     scene skip it entirely. */
+  var flowRevealIO = null;
+  function flowRevealTargets() { return stations.concat(cards).concat(alsoRows); }
+  function setupFlowReveal() {
+    teardownFlowReveal();
+    if (inScene() || !motionQ.matches || !('IntersectionObserver' in window)) return;
+    var targets = flowRevealTargets();
+    targets.forEach(function (el) {
+      el.classList.add('flow-reveal');
+      if (el.getBoundingClientRect().top < vh * 0.92) el.classList.add('revealed'); /* in view: no flash */
+    });
+    flowRevealIO = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('revealed'); flowRevealIO.unobserve(e.target); }
+      });
+    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.04 });
+    targets.forEach(function (el) { if (!el.classList.contains('revealed')) flowRevealIO.observe(el); });
+  }
+  function teardownFlowReveal() {
+    if (flowRevealIO) { flowRevealIO.disconnect(); flowRevealIO = null; }
+    flowRevealTargets().forEach(function (el) { el.classList.remove('flow-reveal', 'revealed'); });
+  }
+
   function teardownFlowGuy() {
     mobileKnockTeardown();
+    teardownFlowReveal();
     if (flowFollow && flowFollow.raf) cancelAnimationFrame(flowFollow.raf);
     var wasRig = flowFollow && flowFollow.rig;
     flowFollow = null;
@@ -2351,6 +2381,7 @@
     if (!flowFollow.rig) setPose('stand', !!t0.wave);   /* CSS fallback only */
 
     mobileKnockBuild();   /* Tier 3: the little hero print-stack that topples on first scroll */
+    setupFlowReveal();    /* Tier 4: cards/stations lift-settle as they scroll in */
   }
 
   /* ---------- palette bridge ---------- */
