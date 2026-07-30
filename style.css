@@ -848,12 +848,13 @@ html.scene .hero {
 }
 
 /* hero knockdown snapshots (scene mode only; JS builds and removes them).
-   Casual scattered prints in the hero whitespace — paper border, slight
-   tilt, subtle idle sway — until little Bryan's landing shakes them loose
-   and they tumble off the bottom (see knockdown in script.js). They're
-   the SAME photos found later at station ii and the ledger. Decorative:
-   aria-hidden, absolute in the fixed hero, zero CLS. Reduced motion and
-   flow mode never build them. */
+   Bold set-dressing at station-plate scale filling the hero's void —
+   paper borders, slight tilts, subtle idle sway — with little Bryan
+   idling among them after the entrance. The visitor's FIRST scroll
+   startles him; his stomp shakes them loose and they tumble off-screen
+   (see knockdown in script.js). They're the SAME photos found later at
+   station ii and the ledger. Decorative: aria-hidden, absolute in the
+   fixed hero, zero CLS. Reduced motion and flow mode never build them. */
 #knock {
   position: absolute;
   inset: 0;
@@ -866,9 +867,9 @@ html.scene .hero {
 .knock-shot {
   position: absolute;
   background: var(--paper);
-  padding: 5px 5px 15px;
+  padding: 6px 6px 20px;
   border: 1px solid rgba(14, 22, 17, 0.16);
-  box-shadow: 4px 6px 0 rgba(14, 22, 17, 0.07);
+  box-shadow: 0 4px 18px rgba(14, 22, 17, 0.14);
   opacity: 0;
   will-change: transform, opacity;
 }
@@ -890,7 +891,9 @@ html.scene .hero .hint { display: block; }
 html.scene:not(.gsap-ready) .hero .hint { opacity: 0; animation: pulse 2.2s ease-in-out 4s infinite; }
 html.scene.gsap-ready .hero .hint { opacity: 0; }
 html.scene.gsap-ready .hero .hint.hint-idle { opacity: 1; transition: opacity 0.7s ease; animation: pulse 2.2s ease-in-out infinite; }
-html.scene.gsap-ready .hero .hint.hint-gone  { opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
+/* animation:none — else .hint-idle's pulse keeps animating opacity and
+   overrides the 0 (animations beat static values), so it never left */
+html.scene.gsap-ready .hero .hint.hint-gone  { opacity: 0; transition: opacity 0.3s ease; pointer-events: none; animation: none; }
 
 /* hero reveal is GSAP-owned in scene mode; CSS just hides the lines
    until the character stagger takes over (no flash before JS runs).

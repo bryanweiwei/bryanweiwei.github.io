@@ -683,8 +683,9 @@
     var p = master ? master.time() : 0;
     prog.style.width = (master ? master.progress() * 100 : 0) + '%';
 
-    /* a real scroll mid-knockdown resolves it instantly and cleanly */
-    if (!KNOCK.done && p > 0.35) knockFinish();
+    /* the first real scroll movement fires the knockdown (own clock;
+       the scroll itself proceeds untouched underneath) */
+    if (!KNOCK.done && !KNOCK.released && p > 0.02) knockRelease();
 
     /* lines (DOM fallback path; GL owns them when html.scene.gl) */
     var lx = -S.slide * 38;
@@ -1321,21 +1322,23 @@
       grow: 1, duration: 1.1, ease: 'power2.inOut', onUpdate: renderScene
     }, 1.2);
 
-    /* 6 — the knockdown rides alongside on its own timeline (aligned to
-       the same 0.15 delay); the entrance above never waits for it */
+    /* 6 — the knockdown set-dressing rides alongside on its own timeline
+       (aligned to the same 0.15 delay); the entrance above never waits
+       for it. The knockdown itself waits for the first scroll. */
     knockBuild();
   }
 
-  /* the snapshots: existing station-ii / ledger derivatives, reused as-is
-     (already cached-or-cheap; the page loads them again further down).
-     Positions flank the centered hero copy and the center line. */
+  /* the snapshots: existing station-ii / ledger derivatives, reused with
+     the same srcset pairs the page requests further down (shared cache).
+     Sized like the station plates — bold set-dressing filling the hero's
+     void, layered around the centered copy (which always paints above). */
   var KNOCK_SHOTS = [
-    { src: 'photo-presenting.jpg', pos: 'left:5vw;top:14vh',   w: 150, r: -5 },
-    { src: 'photo-msft.jpg',       pos: 'right:5vw;top:16vh',  w: 140, r: 4 },
-    { src: 'photo-bte-group.jpg',  pos: 'left:12vw;top:47vh',  w: 120, r: 3.5 },
-    { src: 'photo-fab.jpg',        pos: 'right:11vw;top:45vh', w: 130, r: -3 },
-    { src: 'photo-hackathon.jpg',  pos: 'left:23vw;top:70vh',  w: 118, r: 2.5 },
-    { src: 'photo-pdce.jpg',       pos: 'right:22vw;top:68vh', w: 112, r: -4.5 }
+    { src: 'photo-presenting', ww: 480, pos: 'left:3vw;top:9vh',    w: 320, r: -5 },
+    { src: 'photo-msft',       ww: 320, pos: 'right:3vw;top:12vh',  w: 300, r: 4 },
+    { src: 'photo-bte-group',  ww: 320, pos: 'left:9vw;top:48vh',   w: 260, r: 3.5 },
+    { src: 'photo-fab',        ww: 360, pos: 'right:8vw;top:46vh',  w: 280, r: -3 },
+    { src: 'photo-hackathon',  ww: 360, pos: 'left:18vw;top:66vh',  w: 250, r: 2.5 },
+    { src: 'photo-pdce',       ww: 320, pos: 'right:18vw;top:64vh', w: 240, r: -4.5 }
   ];
 
   function knockBuild() {
@@ -1354,7 +1357,9 @@
       inWrap.style.animationDuration = (4.6 + i * 0.7) + 's';
       inWrap.style.animationDelay = (-i * 1.3) + 's';
       var img = document.createElement('img');
-      img.src = 'images/' + s.src;
+      img.src = 'images/' + s.src + '.jpg';
+      img.srcset = 'images/' + s.src + '.jpg ' + s.ww + 'w, images/' + s.src + '-2x.jpg ' + (s.ww * 2) + 'w';
+      img.sizes = s.w + 'px';
       img.alt = '';
       img.decoding = 'async';
       inWrap.appendChild(img);
@@ -1367,8 +1372,9 @@
     KNOCK.box = box;
     KNOCK.done = false;
     KNOCK.hold = false;
+    KNOCK.armed = false;      /* true once he's landed and idling */
+    KNOCK.released = false;   /* true once the first scroll triggers it */
 
-    var scn = document.getElementById('scene');
     var tl = gsap.timeline({ delay: 0.15 });
     KNOCK.tl = tl;
 
@@ -1376,12 +1382,12 @@
        never in front of the name (they're behind the copy in the DOM) */
     tl.to(KNOCK.shots, { opacity: 1, duration: 0.55, ease: 'power1.out', stagger: 0.07 }, 0.7);
 
-    /* THE DROP — he falls in from above the viewport, straight past the
+    /* THE DROP-IN — at the end of the entrance (the line finishes at
+       ~2.3s) he falls in from above the viewport, straight past the
        name, and lands ON the visible stretch of the ink line below the
        copy (the hero's paper gradient goes transparent from ~75vh, so
-       the line reads there). Landing dead-center (his scroll anchor) put
-       him on the sub-headline — no continuity cost to landing lower: he
-       fades out here on first scroll and re-enters at the elbow as usual.
+       the line reads there). Then he just... lives there, idling among
+       the snapshots (guyTick fidgets), until the visitor scrolls.
        Limbs ride jumpPose via gctx: airborne through the fall, then the
        squash-stretch landing crouch. */
     KNOCK.restY = Math.round(vh * 0.28);   /* feet ≈ 78vh, on the line */
@@ -1399,66 +1405,124 @@
         gctx.y = d.y;                   /* scarf spring feels the fall */
         gctx.frac = 0.45 + 0.41 * this.progress();   /* air pose, tucking */
       }
-    }, 1.6);
+    }, 2.35);
 
-    /* THE LANDING — impact: dust, crouch-to-stand recovery, tremble */
+    /* the landing: dust, crouch-to-stand recovery, then idle (armed) */
     var land = { f: 0.86 };
     tl.to(land, {
       f: 1, duration: 0.3, ease: 'power2.out',
       onStart: fireDust,
       onUpdate: function () { gctx.frac = land.f; },
-      onComplete: function () { gctx.mode = 'idle'; gctx.frac = 0; }
-    }, 2.1);
+      onComplete: function () {
+        gctx.mode = 'idle';
+        gctx.frac = 0;
+        KNOCK.armed = true;
+      }
+    }, 2.85);
+  }
 
-    /* screen tremble: ~350ms of decaying jitter on the hero + the scene
-       layer (line, GL). Nav, progress bar and little Bryan sit outside
-       both, so nothing chrome-level moves. Ends exactly at 0,0. */
+  /* FIRST SCROLL — the knockdown fires, on its own clock, while the
+     scroll proceeds untouched underneath: he startles (a little jump on
+     the spot — his fault, in character), the impact trembles the paper,
+     and the snapshots break loose and tumble off. A hard flick simply
+     carries the hero (and the falling shots with it, they're children)
+     up and away mid-fall — nothing ever lingers or blocks. */
+  function knockRelease() {
+    if (KNOCK.released || KNOCK.done) return;
+    KNOCK.released = true;
+    var scn = document.getElementById('scene');
+
+    /* stop the entrance-aligned timeline (pending fade/drop included) */
+    if (KNOCK.tl) { KNOCK.tl.kill(); KNOCK.tl = null; }
+    gsap.killTweensOf(KNOCK.shots);
+    gsap.set(KNOCK.shots, { opacity: 1 });
+
+    var rtl = gsap.timeline();
+    KNOCK.rtl = rtl;
+    var impactAt;
+
+    if (KNOCK.armed) {
+      /* the startled jump, in place at his rest spot */
+      var h = { f: 0 };
+      rtl.to(h, {
+        f: 1, duration: 0.5, ease: 'none',
+        onUpdate: function () {
+          if (!KNOCK.hold) return;      /* faded out: renderScene owns him */
+          gctx.mode = 'jump';
+          gctx.frac = h.f;
+          var y = KNOCK.restY - hopArc(h.f) * 26;
+          guy.style.transform = 'translate(0px,' + y.toFixed(1) + 'px)';
+          gctx.y = y;
+        },
+        onComplete: function () {
+          if (KNOCK.hold) { gctx.mode = 'idle'; gctx.frac = 0; }
+        }
+      }, 0);
+      impactAt = 0.44;                  /* his touchdown */
+    } else {
+      /* scrolled before he ever landed: skip the personality beat, the
+         shake just happens; if he was mid-air, park him at his spot */
+      if (KNOCK.hold) {
+        guy.style.transform = 'translate(0px,' + KNOCK.restY + 'px)';
+        gctx.mode = 'idle';
+        gctx.frac = 0;
+        gctx.y = KNOCK.restY;
+      }
+      impactAt = 0.05;
+    }
+
+    rtl.call(fireDust, null, impactAt);
+
+    /* screen tremble: ~350ms of decaying jitter. x+y on the scene layer
+       (line, GL); x-ONLY on the hero, because the master timeline owns
+       hero.y once the scroll moves. Nav and progress bar sit outside
+       both. Ends exactly at zero. */
     var tr = { t: 0 };
-    tl.to(tr, {
+    rtl.to(tr, {
       t: 1, duration: 0.35, ease: 'none',
       onUpdate: function () {
         var k = (1 - tr.t) * (1 - tr.t);   /* fast decay, playful not woozy */
-        gsap.set([hero, scn], {
+        gsap.set(scn, {
           x: Math.sin(tr.t * 43) * 5 * k,
           y: Math.cos(tr.t * 31) * 3.5 * k
         });
+        gsap.set(hero, { x: Math.sin(tr.t * 47) * 4 * k });
       }
-    }, 2.1);
+    }, impactAt);
 
-    /* the snapshots shake loose: staggered starts, gravity-ish
-       acceleration, each with its own tumble — all clear by ~3.3s */
+    /* the snapshots break loose: staggered 75ms apart, gravity-ish
+       acceleration, each with its own tumble — on their own clock, so a
+       paused scroll never strands them mid-air */
     KNOCK.shots.forEach(function (el, i) {
-      tl.to(el, {
-        y: '+=' + (vh + 300),
-        x: '+=' + ((i % 2 ? 1 : -1) * (26 + (i * 29) % 48)),
+      rtl.to(el, {
+        y: '+=' + (vh + 420),
+        x: '+=' + ((i % 2 ? 1 : -1) * (30 + (i * 29) % 54)),
         rotation: '+=' + ((i % 2 ? 1 : -1) * (80 + (i * 53) % 75)),
         duration: 0.72 + ((i * 47) % 5) * 0.055,
         ease: 'power2.in'
-      }, 2.16 + i * 0.075);
+      }, impactAt + 0.05 + i * 0.075);
     });
 
-    tl.call(function () { knockFinish(); });
+    rtl.call(function () { knockDone(); });
   }
 
-  /* normal end OR scroll interrupt: photos gone, transforms zeroed,
-     little Bryan standing at his line anchor — no half-fallen states */
-  function knockFinish() {
+  function knockDone() {
     if (KNOCK.done) return;
     KNOCK.done = true;
-    if (KNOCK.tl) { KNOCK.tl.kill(); KNOCK.tl = null; }
+    if (KNOCK.rtl) { KNOCK.rtl.kill(); KNOCK.rtl = null; }
     if (KNOCK.box) KNOCK.box.style.display = 'none';
     var scn = document.getElementById('scene');
-    gsap.set([hero, scn], { x: 0, y: 0 });
-    guy.style.transform = 'translate(0px,' + (KNOCK.restY || 0) + 'px)';
-    gctx.mode = 'idle';
-    gctx.frac = 0;
-    gctx.y = KNOCK.restY || 0;
+    gsap.set(scn, { x: 0, y: 0 });
+    gsap.set(hero, { x: 0 });
   }
 
   function knockTeardown() {
     KNOCK.done = true;
     KNOCK.hold = false;
+    KNOCK.armed = false;
+    KNOCK.released = false;
     if (KNOCK.tl) { KNOCK.tl.kill(); KNOCK.tl = null; }
+    if (KNOCK.rtl) { KNOCK.rtl.kill(); KNOCK.rtl = null; }
     if (KNOCK.box) { KNOCK.box.remove(); KNOCK.box = null; }
     KNOCK.shots = [];
     if (window.gsap) {
