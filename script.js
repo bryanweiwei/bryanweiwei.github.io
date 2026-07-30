@@ -1288,6 +1288,12 @@
 
     S = { grow: 0, retract: 0, elbow: 0, slide: 0, u: 0, ringIn: 0, swing: 0, lineDrop: 0, travel: 0, alsoIn: 0 };
 
+    /* if the flow rig left CHAR set up (flow -> scene switch, no killScene),
+       wipe it so the scene rig re-inits from a clean slate */
+    if (CHAR.ready && CHAR.el && window.gsap) {
+      gsap.set(Object.keys(CHAR.el).map(function (kk) { return CHAR.el[kk]; }), { clearProps: 'all' });
+      CHAR.ready = false;
+    }
     initChar();
     guy.classList.remove('p-stand', 'p-run', 'p-leap', 'waving');
     lastPose = '';
@@ -2070,6 +2076,56 @@
     }
   }
 
+  /* Tier 2: drive the flow-guy with the SAME parametric rig the desktop
+     scene uses — squash-stretch hops, bouncy head-tilt wave, idle fidgets,
+     scarf spring — instead of the static CSS class poses. Position stays
+     the damped follow; this only sets the LIMB poses via applyP() (a
+     different set of elements, so the two never fight). Returns a vertical
+     hop bump (px) to add to his transform during a leap.
+     NOTE: uses nested SVG-transform rotations (the exact thing that paints
+     seams on some real browsers) — flagged for the phone check. The
+     shatter guard is registered in flow as a self-heal net. */
+  function flowRig(f, now, dist, t) {
+    /* scarf spring: follow-through on his vertical velocity this tick */
+    var vy = f.cy - (f.lastCy == null ? f.cy : f.lastCy);
+    f.lastCy = f.cy;
+    var target = Math.max(-28, Math.min(28, vy * 2.2));
+    CHAR.scarfV += (target - CHAR.scarfA) * 0.18;
+    CHAR.scarfV *= 0.78;
+    CHAR.scarfA += CHAR.scarfV;
+
+    if (t.wave && dist < 4) {                      /* bouncy wave at the sign-off */
+      killFidget(false);
+      CHAR.wavePhase += gsap.ticker.deltaRatio(60) / 60;
+      wavePose(CHAR.wavePhase);
+      applyP();
+      return 0;
+    }
+    if (now < (f.leapUntil || 0)) {                /* squash-stretch hop */
+      killFidget(false);
+      CHAR.idleSince = now;
+      var frac = 1 - (f.leapUntil - now) / 300;
+      frac = frac < 0.02 ? 0.02 : frac > 0.98 ? 0.98 : frac;
+      jumpPose(frac);
+      applyP();
+      f.lastCx = f.cx;
+      return hopArc(frac) * 18;                    /* lift him over the hop */
+    }
+    if (dist > 3) {                                /* running down the spine */
+      killFidget(false);
+      CHAR.idleSince = now;
+      var mv = Math.abs(vy) + Math.abs(f.cx - (f.lastCx == null ? f.cx : f.lastCx));
+      f.lastCx = f.cx;
+      CHAR.runPhase += Math.min(3, mv / 9);
+      runPose(CHAR.runPhase, 1);
+      applyP();
+      return 0;
+    }
+    f.lastCx = f.cx;
+    idleBehave(now);                               /* settled: fidgets */
+    return 0;
+  }
+
   function flowGuyTick(now) {
     var f = flowFollow;
     if (!f) return;
@@ -2093,22 +2149,27 @@
     if (mag > maxStep) { var sc = maxStep / mag; sx *= sc; sy *= sc; }
     f.cx += sx;
     f.cy += sy;
-    guy.style.transform = 'translate(' + f.cx.toFixed(1) + 'px,' + f.cy.toFixed(1) + 'px)';
 
     var dist = Math.abs(t.tx - f.cx) + Math.abs(t.ty - f.cy);
     var atWave = t.wave && dist < 4;
-    if (atWave) {
+
+    /* POSE — the parametric rig (Tier 2) when it's up, else CSS classes */
+    var hopBump = 0;
+    if (f.rig && CHAR.ready) {
+      hopBump = flowRig(f, now, dist, t);
+    } else if (atWave) {
       setPose('stand', true);
-      if (!f.confettiFired) { f.confettiFired = true; fireConfetti(); }   /* T1: celebrate at the sign-off */
     } else {
-      if (!t.wave) f.confettiFired = false;                               /* re-arm once he leaves the sign-off */
-      var leaping = now < (f.leapUntil || 0);
-      setPose(leaping ? 'leap' : (dist > 3 ? 'run' : 'stand'), false);    /* T1: hop pose between stations */
+      setPose(now < (f.leapUntil || 0) ? 'leap' : (dist > 3 ? 'run' : 'stand'), false);
     }
+    guy.style.transform = 'translate(' + f.cx.toFixed(1) + 'px,' + (f.cy - hopBump).toFixed(1) + 'px)';
+
+    /* T1: confetti at the sign-off (independent of the pose system) */
+    if (atWave && !f.confettiFired) { f.confettiFired = true; fireConfetti(); }
+    if (!t.wave) f.confettiFired = false;                                 /* re-arm on leaving */
 
     /* T1: landing beat — first settle on a new (non-wave) dock kicks dust
-       + a spine pulse at his feet (his transform is page-space; feet ~
-       spine x = cx+19, y = cy+52) */
+       + a spine pulse at his feet (page-space; feet ~ spine x=cx+19, y=cy+52) */
     if (dist < 3 && f.landed !== f.active && !t.wave) {
       f.landed = f.active;
       fireFlowLanding(f.cx + 19, f.cy + 52);
@@ -2128,9 +2189,21 @@
 
   function teardownFlowGuy() {
     if (flowFollow && flowFollow.raf) cancelAnimationFrame(flowFollow.raf);
+    var wasRig = flowFollow && flowFollow.rig;
     flowFollow = null;
+    if (window.gsap) gsap.ticker.remove(guyGuard);
     guy.classList.remove('flow-guy', 'p-stand', 'p-run', 'p-leap', 'waving');
     lastPose = '';
+    /* if the parametric rig was running in flow, wipe it so the next build
+       re-inits from a clean slate (mirrors killScene). Gated on !inScene:
+       on a flow->scene switch buildScene has ALREADY set the scene rig up
+       by the time this runs, so we must not clobber it. */
+    if (wasRig && CHAR.ready && window.gsap && !inScene()) {
+      killFidget(false);
+      gsap.set(Object.keys(CHAR.el).map(function (kk) { return CHAR.el[kk]; }), { clearProps: 'all' });
+      CHAR.scarfA = 0; CHAR.scarfV = 0;
+      CHAR.ready = false;
+    }
     guy.removeAttribute('style');
   }
 
@@ -2151,14 +2224,36 @@
     }
 
     flowFollow = { docks: buildFlowDocks(), active: 0, cx: 0, cy: 0, raf: 0,
-                   lastT: 0, scrollT: 0, landed: -1, confettiFired: false, leapUntil: 0 };
+                   lastT: 0, scrollT: 0, landed: -1, confettiFired: false, leapUntil: 0,
+                   rig: false, lastCy: null, lastCx: null };
+
+    /* Tier 2: bring the parametric rig into flow. Fresh init (wipe any
+       leftover gsap limb transforms first so svgOrigin recomputes clean),
+       and register the shatter guard as a self-heal net. If gsap is
+       absent (CDN failed) we fall back to the static CSS poses. */
+    if (window.gsap) {
+      if (CHAR.ready && CHAR.el) {
+        gsap.set(Object.keys(CHAR.el).map(function (kk) { return CHAR.el[kk]; }), { clearProps: 'all' });
+        CHAR.ready = false;
+      }
+      initChar();
+      if (CHAR.ready) {
+        flowFollow.rig = true;
+        CHAR.scarfA = 0; CHAR.scarfV = 0; CHAR.runPhase = 0; CHAR.wavePhase = 0;
+        CHAR.prevFrac = 0; CHAR.settled = false; CHAR.idleSince = performance.now();
+        Pfields.forEach(function (kk) { P[kk] = POSES.stand[kk]; });
+        applyP();
+        gsap.ticker.remove(guyGuard); gsap.ticker.add(guyGuard);
+      }
+    }
+
     /* snap onto the currently-active stop so there's no cross-page lerp on load */
     flowFollow.active = flowActive(flowFollow);
     flowFollow.landed = flowFollow.active;   /* already parked here — no landing puff on load */
     var t0 = flowFollow.docks[flowFollow.active];
     flowFollow.cx = t0.tx; flowFollow.cy = t0.ty;
     guy.style.transform = 'translate(' + t0.tx + 'px,' + t0.ty + 'px)';
-    setPose('stand', !!t0.wave);
+    if (!flowFollow.rig) setPose('stand', !!t0.wave);   /* CSS fallback only */
   }
 
   /* ---------- palette bridge ---------- */
