@@ -581,40 +581,38 @@
   function fireConfetti() {
     var r = guy.getBoundingClientRect();
     var cx = r.left + r.width / 2, cy = r.top + r.height * 0.4;
-    var colors = ['#41b06e', '#0e1611', '#dff0e5', '#2c7a4a', '#f4f9f5'];
+    var colors = ['#41b06e', '#0e1611', '#dff0e5', '#2c7a4a', '#f4f9f5', '#1e4d31'];
     var box = document.createElement('div');
     box.setAttribute('aria-hidden', 'true');
-    box.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9';
+    box.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:55';
     document.body.appendChild(box);
-    for (var i = 0; i < 14; i++) {
+    /* a big, wide celebratory burst: ~52 paper bits explode outward from
+       him, pop up, then rain all the way off the bottom. i-based variety
+       (no Math.random) keeps it scrub-stable. */
+    var N = 52;
+    for (var i = 0; i < N; i++) {
       var b = document.createElement('div');
-      var sq = i % 3 === 0;   /* mix of squares and little strips */
+      var kind = i % 4;                                 /* strip / square / big / dot */
+      var w = kind === 0 ? 5 : kind === 1 ? 9 : kind === 2 ? 13 : 6;
+      var h = kind === 0 ? 15 : kind === 1 ? 9 : kind === 2 ? 13 : 6;
       b.style.cssText = 'position:absolute;left:' + cx + 'px;top:' + cy + 'px;' +
-        'width:' + (sq ? 7 : 5) + 'px;height:' + (sq ? 7 : 11) + 'px;' +
-        'background:' + colors[i % colors.length] + ';' +
-        (i % 5 === 4 ? 'border:1px solid rgba(14,22,17,.25);' : '');
+        'width:' + w + 'px;height:' + h + 'px;background:' + colors[i % colors.length] + ';' +
+        'will-change:transform,opacity;' +
+        (kind === 3 ? 'border-radius:50%;' : '') +
+        (i % 6 === 5 ? 'border:1px solid rgba(14,22,17,.3);' : '');
       box.appendChild(b);
-      var a = (i / 14) * Math.PI * 2 + (i % 3) * 0.35;   /* spread, desynced */
-      var dist = 46 + (i * 37) % 52;
-      gsap.to(b, {
-        x: Math.cos(a) * dist * 1.5,
-        duration: 1.05 + (i % 4) * 0.12,
-        ease: 'power1.out'
-      });
-      gsap.to(b, {
-        y: 150 + (i * 23) % 60,
-        duration: 1.05 + (i % 4) * 0.12,
-        ease: 'back.in(' + (1.6 + (i % 3) * 0.5) + ')',   /* up, then gravity */
-        delay: (i % 5) * 0.02
-      });
-      gsap.to(b, {
-        rotation: ((i % 2 ? 1 : -1) * (200 + (i * 61) % 260)),
-        opacity: 0,
-        duration: 1.05 + (i % 4) * 0.12,
-        ease: 'power1.in'
-      });
+      var side = i % 2 ? 1 : -1;
+      var spread = ((i * 97) % 100) / 100;              /* 0..1 */
+      var vx = side * (70 + spread * 520);              /* wide reach: up to ~590px each way */
+      var dur = 1.5 + (i % 6) * 0.16;                   /* 1.5 .. 2.3s */
+      var fall = (vh || 800) * 0.62 + (i * 53) % 260;   /* rains off the bottom */
+      gsap.to(b, { x: vx, duration: dur, ease: 'power3.out' });               /* explode outward */
+      gsap.to(b, { y: fall, duration: dur, ease: 'back.in(' + (1.1 + (i % 4) * 0.45) + ')',
+        delay: (i % 7) * 0.012 });                                           /* pop up, then fall */
+      gsap.to(b, { rotation: side * (360 + (i * 61) % 620), duration: dur, ease: 'power1.out' });
+      gsap.to(b, { opacity: 0, duration: dur * 0.4, delay: dur * 0.6, ease: 'power1.in' });
     }
-    gsap.delayedCall(1.7, function () { box.remove(); });
+    gsap.delayedCall(2.9, function () { box.remove(); });
   }
 
   function glPx2World() {
@@ -765,7 +763,7 @@
       GL.pluckT += dr / 60;
       GL.pluck *= Math.pow(0.86, dr);
       GL.group.position.y = (GL.baseY || 0) +
-        glPx2World() * 7 * GL.pluck * Math.sin(GL.pluckT * 46);
+        glPx2World() * 12 * GL.pluck * Math.sin(GL.pluckT * 46);
       GL.need = true;
     } else if (GL.pluck) {
       GL.pluck = 0;
@@ -1717,28 +1715,30 @@
        both. Ends exactly at zero. */
     var tr = { t: 0 };
     rtl.to(tr, {
-      t: 1, duration: 0.35, ease: 'none',
+      t: 1, duration: 0.42, ease: 'none',
       onUpdate: function () {
-        var k = (1 - tr.t) * (1 - tr.t);   /* fast decay, playful not woozy */
+        var k = (1 - tr.t) * (1 - tr.t);   /* fast decay: bigger thud, still not woozy */
         gsap.set(scn, {
-          x: Math.sin(tr.t * 43) * 5 * k,
-          y: Math.cos(tr.t * 31) * 3.5 * k
+          x: Math.sin(tr.t * 43) * 8 * k,
+          y: Math.cos(tr.t * 31) * 5.5 * k
         });
-        gsap.set(hero, { x: Math.sin(tr.t * 47) * 4 * k });
+        gsap.set(hero, { x: Math.sin(tr.t * 47) * 6 * k });
       }
     }, impactAt);
 
-    /* the snapshots break loose: staggered 75ms apart, gravity-ish
-       acceleration, each with its own tumble — on their own clock, so a
-       paused scroll never strands them mid-air */
+    /* the snapshots break loose — now they get KNOCKED OUTWARD, not just
+       dropped: wide horizontal scatter, a full tumble, gravity-ish fall
+       off the bottom, tighter 55ms stagger so it reads as one big burst.
+       On their own clock, so a paused scroll never strands them mid-air. */
     KNOCK.shots.forEach(function (el, i) {
+      var side = i % 2 ? 1 : -1;
       rtl.to(el, {
-        y: '+=' + (vh + 420),
-        x: '+=' + ((i % 2 ? 1 : -1) * (30 + (i * 29) % 54)),
-        rotation: '+=' + ((i % 2 ? 1 : -1) * (80 + (i * 53) % 75)),
-        duration: 0.72 + ((i * 47) % 5) * 0.055,
+        y: '+=' + (vh + 520),
+        x: '+=' + (side * (150 + (i * 73) % 240)),        /* fly outward, not just down */
+        rotation: '+=' + (side * (210 + (i * 97) % 320)), /* a real tumble */
+        duration: 0.82 + ((i * 47) % 5) * 0.06,
         ease: 'power2.in'
-      }, impactAt + 0.05 + i * 0.075);
+      }, impactAt + 0.04 + i * 0.055);
     });
 
     rtl.call(function () { knockDone(); });
