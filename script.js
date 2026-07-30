@@ -1629,7 +1629,7 @@
   function knockRearm() {
     if (KNOCK.rearmQ) return;
     KNOCK.rearmQ = true;
-    gsap.delayedCall(0.18, function () {
+    gsap.delayedCall(0.05, function () {
       KNOCK.rearmQ = false;
       var pp = master ? master.time() : 0;
       if (!inScene() || !KNOCK.box || !KNOCK.done || !KNOCK.released || pp > 0.02) return;
@@ -1648,10 +1648,10 @@
         gsap.set(el, { opacity: 1 });
         tl.to(el, {
           x: 0, y: 0, rotation: KNOCK_SHOTS[i].r,
-          duration: 0.6, ease: 'power3.out'
-        }, i * 0.05);
+          duration: 0.35, ease: 'power3.out'
+        }, i * 0.03);
       });
-      knockDropIn(tl, 0.25);
+      knockDropIn(tl, 0.1);
       KNOCK.done = false;   /* re-armed: the release trigger is live again */
     });
   }
