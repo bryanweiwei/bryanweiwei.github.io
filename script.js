@@ -1657,12 +1657,30 @@
     }, at + 0.5);
   }
 
+  /* the shots rest INSIDE the hero (behind the name). But the hero fades
+     to opacity 0 as you scroll — so if they fell in there, a hard flick
+     would fade them out mid-tumble and the fall would just "disappear".
+     On release we lift the whole box to <body> as a fixed layer so the
+     fall stays visible all the way down the page regardless of scroll
+     speed; the re-arm tucks it back behind the name. Reparenting doesn't
+     disturb the shots' gsap transforms (they're viewport-anchored either
+     way — the hero is fixed inset:0, the fall layer is fixed inset:0). */
+  function knockToFallLayer() {
+    if (!KNOCK.box || KNOCK.box.parentNode === document.body) return;
+    KNOCK.box.classList.add('knock-falling');
+    document.body.appendChild(KNOCK.box);
+  }
+  function knockToHero() {
+    if (!KNOCK.box) return;
+    KNOCK.box.classList.remove('knock-falling');
+    hero.insertBefore(KNOCK.box, hero.firstChild);
+  }
+
   /* FIRST SCROLL — the knockdown fires, on its own clock, while the
      scroll proceeds untouched underneath: he startles (a little jump on
      the spot — his fault, in character), the impact trembles the paper,
-     and the snapshots break loose and tumble off. A hard flick simply
-     carries the hero (and the falling shots with it, they're children)
-     up and away mid-fall — nothing ever lingers or blocks. */
+     and the snapshots break loose and tumble off — in their own fixed
+     layer, so the fall reads fully even on a hard flick. */
   function knockRelease() {
     if (KNOCK.released || KNOCK.done) return;
     KNOCK.released = true;
@@ -1672,6 +1690,7 @@
     if (KNOCK.tl) { KNOCK.tl.kill(); KNOCK.tl = null; }
     gsap.killTweensOf(KNOCK.shots);
     gsap.set(KNOCK.shots, { opacity: 1 });
+    knockToFallLayer();   /* detach so the fall never fades with the hero */
 
     var rtl = gsap.timeline();
     KNOCK.rtl = rtl;
@@ -1733,10 +1752,10 @@
     KNOCK.shots.forEach(function (el, i) {
       var side = i % 2 ? 1 : -1;
       rtl.to(el, {
-        y: '+=' + (vh + 520),
+        y: '+=' + (vh + 680),                             /* fall well down the page */
         x: '+=' + (side * (150 + (i * 73) % 240)),        /* fly outward, not just down */
         rotation: '+=' + (side * (210 + (i * 97) % 320)), /* a real tumble */
-        duration: 0.82 + ((i * 47) % 5) * 0.06,
+        duration: 1.0 + ((i * 47) % 5) * 0.07,            /* a beat longer so the fall reads */
         ease: 'power2.in'
       }, impactAt + 0.04 + i * 0.055);
     });
@@ -1768,6 +1787,7 @@
       if (!inScene() || !KNOCK.box || !KNOCK.done || !KNOCK.released || pp >= 5.5) return;
       if (KNOCK.rtl) { KNOCK.rtl.kill(); KNOCK.rtl = null; }
       KNOCK.box.style.display = '';
+      knockToHero();   /* tuck the box back behind the name for the rest state */
       /* was he still standing there (gentle knockdown, never scrolled
          far)? Then no re-drop — the prints just rise back around him */
       var himThere = KNOCK.hold && gctx.visible;

@@ -872,6 +872,15 @@ html.scene .hero {
      wins if a snapshot ever drifts under it at narrow scene widths */
   z-index: -1;
 }
+/* once knocked loose, the box detaches to the top level so it no longer
+   fades away with the hero — the fall stays visible down the page even on
+   a hard flick, instead of vanishing with the title screen. JS reparents
+   it to <body> and adds this class; the re-arm moves it back behind the
+   name (see knockToFallLayer / knockToHero). */
+#knock.knock-falling {
+  position: fixed;
+  z-index: 8;
+}
 .knock-shot {
   position: absolute;
   background: var(--paper);
