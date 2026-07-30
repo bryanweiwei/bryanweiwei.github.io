@@ -1621,29 +1621,37 @@
     gsap.set(hero, { x: 0 });
   }
 
-  /* BACK AT THE TOP after a knockdown: the set-dressing quietly returns
-     to its pins and he drops back in — so the next scroll down knocks it
-     all over again. Debounced (0.5s settled at p≈0) so snap-back inertia
-     wiggling across the threshold never releases a half-restored set. */
+  /* BACK AT THE TOP after a knockdown: the prints RISE back up from
+     below the fold onto their pins (the fall, rewound) and he drops
+     back in — so the next scroll down knocks it all over again. A short
+     settle debounce keeps snap-back inertia wiggling across the
+     threshold from releasing a half-restored set. */
   function knockRearm() {
     if (KNOCK.rearmQ) return;
     KNOCK.rearmQ = true;
-    gsap.delayedCall(0.5, function () {
+    gsap.delayedCall(0.18, function () {
       KNOCK.rearmQ = false;
       var pp = master ? master.time() : 0;
       if (!inScene() || !KNOCK.box || !KNOCK.done || !KNOCK.released || pp > 0.02) return;
       if (KNOCK.rtl) { KNOCK.rtl.kill(); KNOCK.rtl = null; }
       KNOCK.box.style.display = '';
-      KNOCK.shots.forEach(function (el, i) {
-        gsap.set(el, { x: 0, y: 0, rotation: KNOCK_SHOTS[i].r, opacity: 0 });
-      });
       KNOCK.hold = false;
       KNOCK.armed = false;
       KNOCK.released = false;
       var tl = gsap.timeline();
       KNOCK.tl = tl;
-      tl.to(KNOCK.shots, { opacity: 1, duration: 0.5, ease: 'power1.out', stagger: 0.06 }, 0.1);
-      knockDropIn(tl, 0.3);
+      /* they're still where the fall left them (below the fold, tumbled);
+         guarantee a from-below start, then decelerate up onto the pins,
+         un-tumbling en route */
+      KNOCK.shots.forEach(function (el, i) {
+        if (+gsap.getProperty(el, 'y') < vh * 0.5) gsap.set(el, { y: vh + 320 });
+        gsap.set(el, { opacity: 1 });
+        tl.to(el, {
+          x: 0, y: 0, rotation: KNOCK_SHOTS[i].r,
+          duration: 0.6, ease: 'power3.out'
+        }, i * 0.05);
+      });
+      knockDropIn(tl, 0.25);
       KNOCK.done = false;   /* re-armed: the release trigger is live again */
     });
   }
