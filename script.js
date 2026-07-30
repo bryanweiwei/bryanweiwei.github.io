@@ -763,8 +763,10 @@
     prog.style.width = (master ? master.progress() * 100 : 0) + '%';
 
     /* the first real scroll movement fires the knockdown (own clock;
-       the scroll itself proceeds untouched underneath) */
+       the scroll itself proceeds untouched underneath); settling back
+       at the top re-arms it so the whole beat replays */
     if (!KNOCK.done && !KNOCK.released && p > 0.02) knockRelease();
+    else if (KNOCK.done && KNOCK.released && p <= 0.02) knockRearm();
 
     /* lines (DOM fallback path; GL owns them when html.scene.gl) */
     var lx = -S.slide * 38;
@@ -1435,18 +1437,9 @@
   function knockBuild() {
     knockTeardown();   /* mode re-entry: never stack two runs */
 
-    /* one-shot per page load: once the photos have fallen, any scene
-       rebuild (resize, browser zoom, devtools, motion toggle — all of
-       which replay the entrance) must NOT resurrect them. He still
-       drops in and idles; the shots stay down. KNOCK.done stays true
-       from the teardown, so the first-scroll release never re-fires. */
-    if (KNOCK.playedOnce) {
-      var bare = gsap.timeline({ delay: 0.15 });
-      KNOCK.tl = bare;
-      knockDropIn(bare);
-      return;
-    }
-
+    /* a scene rebuild replays the entrance, photos included — that's by
+       design: the knockdown re-arms at the top anyway (see knockRearm),
+       and a rebuild mid-page releases invisibly on the next render tick. */
     var box = document.createElement('div');
     box.id = 'knock';
     box.setAttribute('aria-hidden', 'true');
@@ -1497,8 +1490,11 @@
      the line reads there). Then he just... lives there, idling among
      the snapshots (guyTick fidgets), until the visitor scrolls.
      Limbs ride jumpPose via gctx: airborne through the fall, then the
-     squash-stretch landing crouch. */
-  function knockDropIn(tl) {
+     squash-stretch landing crouch. `at` shifts the whole beat (the
+     re-arm replays it almost immediately; the entrance waits for the
+     line to finish). */
+  function knockDropIn(tl, at) {
+    if (at == null) at = 2.35;
     KNOCK.restY = Math.round(vh * 0.28);   /* feet ≈ 78vh, on the line */
     var d = { y: -(vh / 2 + 110) };
     tl.to(d, {
@@ -1514,7 +1510,7 @@
         gctx.y = d.y;                   /* scarf spring feels the fall */
         gctx.frac = 0.45 + 0.41 * this.progress();   /* air pose, tucking */
       }
-    }, 2.35);
+    }, at);
 
     /* the landing: dust, crouch-to-stand recovery, then idle (armed) */
     var land = { f: 0.86 };
@@ -1527,7 +1523,7 @@
         gctx.frac = 0;
         KNOCK.armed = true;
       }
-    }, 2.85);
+    }, at + 0.5);
   }
 
   /* FIRST SCROLL — the knockdown fires, on its own clock, while the
@@ -1539,7 +1535,6 @@
   function knockRelease() {
     if (KNOCK.released || KNOCK.done) return;
     KNOCK.released = true;
-    KNOCK.playedOnce = true;   /* the photos never come back this visit */
     var scn = document.getElementById('scene');
 
     /* stop the entrance-aligned timeline (pending fade/drop included) */
@@ -1626,11 +1621,39 @@
     gsap.set(hero, { x: 0 });
   }
 
+  /* BACK AT THE TOP after a knockdown: the set-dressing quietly returns
+     to its pins and he drops back in — so the next scroll down knocks it
+     all over again. Debounced (0.5s settled at p≈0) so snap-back inertia
+     wiggling across the threshold never releases a half-restored set. */
+  function knockRearm() {
+    if (KNOCK.rearmQ) return;
+    KNOCK.rearmQ = true;
+    gsap.delayedCall(0.5, function () {
+      KNOCK.rearmQ = false;
+      var pp = master ? master.time() : 0;
+      if (!inScene() || !KNOCK.box || !KNOCK.done || !KNOCK.released || pp > 0.02) return;
+      if (KNOCK.rtl) { KNOCK.rtl.kill(); KNOCK.rtl = null; }
+      KNOCK.box.style.display = '';
+      KNOCK.shots.forEach(function (el, i) {
+        gsap.set(el, { x: 0, y: 0, rotation: KNOCK_SHOTS[i].r, opacity: 0 });
+      });
+      KNOCK.hold = false;
+      KNOCK.armed = false;
+      KNOCK.released = false;
+      var tl = gsap.timeline();
+      KNOCK.tl = tl;
+      tl.to(KNOCK.shots, { opacity: 1, duration: 0.5, ease: 'power1.out', stagger: 0.06 }, 0.1);
+      knockDropIn(tl, 0.3);
+      KNOCK.done = false;   /* re-armed: the release trigger is live again */
+    });
+  }
+
   function knockTeardown() {
     KNOCK.done = true;
     KNOCK.hold = false;
     KNOCK.armed = false;
     KNOCK.released = false;
+    KNOCK.rearmQ = false;
     if (KNOCK.tl) { KNOCK.tl.kill(); KNOCK.tl = null; }
     if (KNOCK.rtl) { KNOCK.rtl.kill(); KNOCK.rtl = null; }
     if (KNOCK.box) { KNOCK.box.remove(); KNOCK.box = null; }
