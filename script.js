@@ -188,20 +188,28 @@
   var P = {}, Pfields = Object.keys(POSES.stand);
   Pfields.forEach(function (k) { P[k] = POSES.stand[k]; });
 
+  /* joint pivots in viewBox coords. gsap's svgOrigin bakes these into each
+     group's matrix so a limb rotates about its JOINT, not the SVG canvas
+     origin (0,0) — rotating about 0,0 is exactly what scatters him. Kept
+     as data so both initChar and the self-heal guard can (re)establish it. */
+  var CHAR_IDS = ['rig', 'bw-body', 'bw-head', 'bw-scarf', 'bw-armL', 'bw-armR',
+                  'bw-foreL', 'bw-foreR', 'bw-legL', 'bw-legR', 'bw-shinL', 'bw-shinR'];
+  var CHAR_ORIGINS = {
+    rig: '20 48', 'bw-body': '20 32', 'bw-head': '20 15', 'bw-scarf': '20 15',
+    'bw-armL': '20 20', 'bw-armR': '20 20', 'bw-foreL': '15 25', 'bw-foreR': '25 25',
+    'bw-legL': '20 32', 'bw-legR': '20 32', 'bw-shinL': '16 39', 'bw-shinR': '24 39'
+  };
+  function setCharOrigins() {
+    CHAR_IDS.forEach(function (id) {
+      if (CHAR.el[id]) gsap.set(CHAR.el[id], { svgOrigin: CHAR_ORIGINS[id], rotation: 0.001 });
+    });
+  }
+
   function initChar() {
     if (CHAR.ready || !window.gsap) return;
-    var ids = ['rig', 'bw-body', 'bw-head', 'bw-scarf', 'bw-armL', 'bw-armR',
-               'bw-foreL', 'bw-foreR', 'bw-legL', 'bw-legR', 'bw-shinL', 'bw-shinR'];
     CHAR.el = {};
-    ids.forEach(function (id) { CHAR.el[id] = document.getElementById(id); });
-    var origins = {
-      rig: '20 48', 'bw-body': '20 32', 'bw-head': '20 15', 'bw-scarf': '20 15',
-      'bw-armL': '20 20', 'bw-armR': '20 20', 'bw-foreL': '15 25', 'bw-foreR': '25 25',
-      'bw-legL': '20 32', 'bw-legR': '20 32', 'bw-shinL': '16 39', 'bw-shinR': '24 39'
-    };
-    ids.forEach(function (id) {
-      gsap.set(CHAR.el[id], { svgOrigin: origins[id], rotation: 0.001 });
-    });
+    CHAR_IDS.forEach(function (id) { CHAR.el[id] = document.getElementById(id); });
+    setCharOrigins();
     CHAR.dust = [].slice.call(document.querySelectorAll('#bw-dust .dust'));
     CHAR.scarfA = 0; CHAR.scarfV = 0;
     CHAR.runPhase = 0;
@@ -432,6 +440,95 @@
     /* hidden: relax state so re-entry is clean */
     killFidget(false);
     CHAR.idleSince = now;
+  }
+
+  /* ---------- shatter guard: little Bryan can never come apart ----------
+     Every frame, measure how far each limb group has drifted from the rig
+     origin (viewBox 20,48, mapped into the guy's on-screen box). A healthy
+     rig keeps every limb within ~SHATTER_PX; if a limb blows past that,
+     his transforms have come apart (wrong pivot / accumulated tweens /
+     wiped origin). DEBUG mode (?debug or #debug) freezes the exact frame
+     and dumps state for inspection; production silently self-heals — kills
+     every limb tween, re-establishes the joint origins, snaps to a clean
+     stand — so no visitor ever sees a shattered mascot. */
+  var GUY_DEBUG = /(?:[?&#])debug\b/.test(location.search + location.hash);
+  var SHATTER_PX = 70;                 /* max healthy limb drift, screen px */
+  var guyGuardN = 0, guyFrozen = false, guyMaxDrift = 0;
+
+  function guyDrift() {
+    if (!guy) return -1;
+    var cs = getComputedStyle(guy);
+    if (cs.display === 'none' || +cs.opacity < 0.05) return -1;
+    var box = guy.getBoundingClientRect();
+    if (!box.width) return -1;
+    /* rig origin (20,48 in the 40x56 viewBox) mapped into the box */
+    var ox = box.left + box.width * (20 / 40);
+    var oy = box.top + box.height * (48 / 56);
+    var worst = 0;
+    for (var i = 1; i < CHAR_IDS.length; i++) {   /* skip 'rig' itself */
+      var el = CHAR.el ? CHAR.el[CHAR_IDS[i]] : document.getElementById(CHAR_IDS[i]);
+      if (!el) continue;
+      var r = el.getBoundingClientRect();
+      var d = Math.hypot((r.left + r.width / 2) - ox, (r.top + r.height / 2) - oy);
+      if (d > worst) { worst = d; guyGuard.who = CHAR_IDS[i]; }
+    }
+    return worst;
+  }
+
+  function guyGuard() {
+    if (!window.gsap || guyFrozen) return;
+    /* per-frame in debug (catch the exact frame); throttled in production */
+    if (!GUY_DEBUG && (++guyGuardN % 4)) return;
+    var drift = guyDrift();
+    if (drift < 0) return;
+    if (drift > guyMaxDrift) guyMaxDrift = drift;
+    if (drift <= SHATTER_PX) return;
+    if (GUY_DEBUG) guyFreezeDump(drift);
+    else healGuy();
+  }
+  guyGuard.who = '';
+
+  function guyFreezeDump(drift) {
+    guyFrozen = true;
+    if (window.gsap) gsap.globalTimeline.pause();
+    html.classList.add('debug-frozen');
+    var limbs = CHAR_IDS.map(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return { id: id, missing: true };
+      return {
+        id: id,
+        transform: el.style.transform || getComputedStyle(el).transform,
+        origin: getComputedStyle(el).transformOrigin,
+        box: getComputedStyle(el).transformBox,
+        tweens: window.gsap ? gsap.getTweensOf(el).length : -1
+      };
+    });
+    console.error('[GUY SHATTER] drift=' + drift.toFixed(1) + 'px on ' + guyGuard.who, {
+      scrollY: Math.round(scrollY),
+      lenis: lenis ? Math.round(lenis.scroll) : null,
+      p: gctx.p, mode: gctx.mode, frac: gctx.frac, visible: gctx.visible,
+      charReady: CHAR.ready,
+      activeTweensOnLimbs: limbs.reduce(function (n, l) { return n + (l.tweens > 0 ? l.tweens : 0); }, 0),
+      limbs: limbs
+    });
+  }
+
+  function healGuy() {
+    if (!window.gsap) return;
+    killFidget(false);
+    var els = CHAR_IDS.map(function (id) { return (CHAR.el && CHAR.el[id]) || document.getElementById(id); })
+                      .filter(Boolean);
+    gsap.killTweensOf(els);
+    /* clean slate FIRST: re-setting a confused svgOrigin in place doesn't
+       fully recompute in gsap, so wipe every transform, THEN re-establish
+       the joint pivots and snap to a clean stand (mirrors a fresh init). */
+    gsap.set(els, { clearProps: 'all' });
+    if (CHAR.el) {
+      setCharOrigins();
+      CHAR.scarfA = 0; CHAR.scarfV = 0;
+      Pfields.forEach(function (k) { P[k] = POSES.stand[k]; });
+      if (CHAR.ready) applyP();
+    }
   }
 
   /* ---------- the master timeline ---------- */
@@ -1746,6 +1843,13 @@
       gsap.set(Object.keys(CHAR.el).map(function (k) { return CHAR.el[k]; }),
         { clearProps: 'all' });
       CHAR.scarfA = 0; CHAR.scarfV = 0;
+      /* clearProps wipes gsap's cached svgOrigin transforms on every limb.
+         Mark the rig un-inited so the NEXT buildScene's initChar() re-runs
+         in full (re-establishing those origins + resetting motion state) —
+         otherwise it early-returns on CHAR.ready and the limbs pivot around
+         the wrong points: little Bryan comes back discombobulated after a
+         scene → flow → scene round trip (e.g. resizing across the width). */
+      CHAR.ready = false;
     }
     gctx.mode = 'hidden';
     killGL();
@@ -2012,6 +2116,12 @@
   measure();
   if (inScene()) buildScene();
   syncFlowGuy();
+
+  /* the shatter guard rides the global ticker in BOTH modes (it early-outs
+     when the guy is hidden), so it protects the scene rig and the flow
+     poses alike. gsap.ticker runs continuously once gsap is loaded. */
+  if (window.gsap) gsap.ticker.add(guyGuard);
+  if (GUY_DEBUG) window.__guy = { drift: guyDrift, max: function () { return guyMaxDrift; }, heal: healGuy };
 })();
 
 /* ============================================================

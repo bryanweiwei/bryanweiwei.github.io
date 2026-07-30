@@ -1544,6 +1544,16 @@ html.scene #guy {
   to { transform: rotate(-140deg); }
 }
 
+/* debug: the shatter guard (?debug) freezes the broken frame and marks it
+   so it's obvious in a screenshot / devtools; never applied in production */
+html.debug-frozen #guy { outline: 2px solid red; outline-offset: 4px; }
+html.debug-frozen::after {
+  content: "GUY SHATTER — frozen (see console)";
+  position: fixed; top: 8px; left: 50%; transform: translateX(-50%);
+  z-index: 999; background: #b00; color: #fff; font: 600 12px/1 monospace;
+  padding: 6px 10px; letter-spacing: .04em;
+}
+
 /* Belt & suspenders: if the UA prefers reduced motion, kill all
    animation even if a stale .scene class ever slipped through. */
 @media (prefers-reduced-motion: reduce) {
