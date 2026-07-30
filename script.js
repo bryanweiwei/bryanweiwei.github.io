@@ -1946,6 +1946,11 @@
     if (!ticking) { ticking = true; requestAnimationFrame(flowFrame); }
     /* wake the damped follow so little Bryan tracks the scroll */
     if (flowFollow) { flowFollow.scrollT = performance.now(); flowKick(); }
+    /* mobile hero knockdown: first scroll topples the stack; back to top restores */
+    if (MKNOCK.box) {
+      if (scrollY > 40 && !MKNOCK.released) mobileKnockRelease();
+      else if (scrollY < 6 && MKNOCK.released && MKNOCK.done) mobileKnockRearm();
+    }
   }, { passive: true });
 
   addEventListener('resize', function () {
@@ -2187,7 +2192,97 @@
     if (flowFollow && !flowFollow.raf) flowFollow.raf = requestAnimationFrame(flowGuyTick);
   }
 
+  /* ---------- mobile hero knockdown (flow only) ----------
+     A compact fanned stack of prints tucked in the lower-right hero
+     whitespace (below the proof, right of the line). On the FIRST scroll
+     they detach to a fixed layer and topple off — so the fall reads even
+     as the hero scrolls away; scrolling back to the top restores them.
+     Kept small + cornered so it never crowds the masthead. Flow + motion
+     only; reduced-motion and scene never build it. Separate from the
+     desktop KNOCK. */
+  var MKNOCK = { box: null, shots: [], released: false, done: true };
+  var MKNOCK_SHOTS = [
+    { src: 'photo-hackathon', ww: 360, w: 94, r: -8, pos: 'top:312px;right:5vw' },
+    { src: 'photo-fab',       ww: 360, w: 86, r: 6,  pos: 'top:332px;right:22vw' },
+    { src: 'photo-pdce',      ww: 320, w: 90, r: -3, pos: 'top:348px;right:11vw' }
+  ];
+
+  function mobileKnockBuild() {
+    mobileKnockTeardown();
+    if (inScene() || !motionQ.matches || !window.gsap || !hero) return;
+    var box = document.createElement('div');
+    box.id = 'mknock';
+    box.setAttribute('aria-hidden', 'true');
+    MKNOCK.shots = MKNOCK_SHOTS.map(function (s, i) {
+      var el = document.createElement('div');
+      el.className = 'mknock-shot';
+      el.style.cssText = s.pos + ';width:' + s.w + 'px;z-index:' + (MKNOCK_SHOTS.length - i);
+      var img = document.createElement('img');
+      img.src = 'images/' + s.src + '.jpg';
+      img.srcset = 'images/' + s.src + '.jpg ' + s.ww + 'w, images/' + s.src + '-2x.jpg ' + (s.ww * 2) + 'w';
+      img.sizes = s.w + 'px'; img.alt = ''; img.decoding = 'async';
+      el.appendChild(img); box.appendChild(el);
+      gsap.set(el, { rotation: s.r });
+      return el;
+    });
+    hero.appendChild(box);
+    MKNOCK.box = box; MKNOCK.released = false; MKNOCK.done = false;
+    if (scrollY > 40) {           /* loaded already scrolled: treat as already fallen */
+      MKNOCK.released = true; MKNOCK.done = true; gsap.set(MKNOCK.shots, { opacity: 0 });
+      box.style.display = 'none';
+      return;
+    }
+    gsap.fromTo(MKNOCK.shots, { opacity: 0, y: 12 },
+      { opacity: 1, y: 0, duration: 0.6, ease: 'power1.out', stagger: 0.08, delay: 0.35 });
+  }
+
+  function mobileKnockRelease() {
+    if (MKNOCK.released || MKNOCK.done || !MKNOCK.box) return;
+    MKNOCK.released = true;
+    MKNOCK.box.classList.add('mknock-falling');   /* detach to a fixed layer */
+    document.body.appendChild(MKNOCK.box);
+    gsap.killTweensOf(MKNOCK.shots);
+    gsap.set(MKNOCK.shots, { opacity: 1 });
+    var n = MKNOCK.shots.length;
+    MKNOCK.shots.forEach(function (el, i) {
+      var side = i % 2 ? 1 : -1;
+      gsap.to(el, {
+        y: '+=' + (vh + 420), x: '+=' + (side * (70 + i * 44)),
+        rotation: '+=' + (side * (200 + i * 90)),
+        duration: 0.95 + i * 0.06, ease: 'power2.in', delay: 0.02 + i * 0.05,
+        onComplete: i === n - 1
+          ? function () {
+              if (MKNOCK.box) MKNOCK.box.style.display = 'none';
+              MKNOCK.done = true;
+              if (scrollY < 6) mobileKnockRearm();   /* scrolled back mid-fall: restore now */
+            }
+          : null
+      });
+    });
+  }
+
+  function mobileKnockRearm() {
+    if (!MKNOCK.box || !MKNOCK.released) return;
+    MKNOCK.box.classList.remove('mknock-falling');
+    hero.appendChild(MKNOCK.box);
+    MKNOCK.box.style.display = '';
+    MKNOCK.released = false; MKNOCK.done = false;
+    gsap.killTweensOf(MKNOCK.shots);
+    MKNOCK.shots.forEach(function (el, i) {
+      if (+gsap.getProperty(el, 'y') < vh * 0.5) gsap.set(el, { y: vh + 200 });
+      gsap.set(el, { opacity: 1 });
+      gsap.to(el, { x: 0, y: 0, rotation: MKNOCK_SHOTS[i].r, duration: 0.42, ease: 'power3.out', delay: i * 0.03 });
+    });
+  }
+
+  function mobileKnockTeardown() {
+    MKNOCK.done = true; MKNOCK.released = false;
+    if (MKNOCK.box) { if (window.gsap) gsap.killTweensOf(MKNOCK.shots); MKNOCK.box.remove(); MKNOCK.box = null; }
+    MKNOCK.shots = [];
+  }
+
   function teardownFlowGuy() {
+    mobileKnockTeardown();
     if (flowFollow && flowFollow.raf) cancelAnimationFrame(flowFollow.raf);
     var wasRig = flowFollow && flowFollow.rig;
     flowFollow = null;
@@ -2254,6 +2349,8 @@
     flowFollow.cx = t0.tx; flowFollow.cy = t0.ty;
     guy.style.transform = 'translate(' + t0.tx + 'px,' + t0.ty + 'px)';
     if (!flowFollow.rig) setPose('stand', !!t0.wave);   /* CSS fallback only */
+
+    mobileKnockBuild();   /* Tier 3: the little hero print-stack that topples on first scroll */
   }
 
   /* ---------- palette bridge ---------- */

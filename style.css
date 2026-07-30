@@ -899,6 +899,23 @@ html.scene .hero {
   to   { transform: rotate(0.5deg); }
 }
 
+/* mobile hero knockdown (flow only; JS builds/removes it) — a compact
+   fanned print stack tucked in the lower-right hero whitespace that
+   topples on first scroll. Scoped to the (relative) mobile hero; detaches
+   to a fixed layer while falling so it reads down the page. */
+#mknock { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+#mknock.mknock-falling { position: fixed; z-index: 8; }
+.mknock-shot {
+  position: absolute;
+  background: var(--paper);
+  padding: 5px 5px 13px;
+  border: 1px solid rgba(14, 22, 17, 0.16);
+  box-shadow: 0 4px 14px rgba(14, 22, 17, 0.14);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.mknock-shot img { display: block; width: 100%; height: auto; filter: saturate(0.94); }
+
 /* scroll hint: hidden on load; fades in after 4 s of idle (JS adds
    .hint-idle), then fades out permanently on first scroll (.hint-gone).
    Failsafe: with no gsap-ready, it appears after a CSS delay so a slow
@@ -1591,6 +1608,7 @@ html.debug-frozen::after {
     max-width: 680px;
     margin: 0 auto;
     padding: 7vh 4vw 0 calc(4vw + 34px);
+    position: relative;   /* scopes the #mknock print stack to the hero */
   }
   .hero h1 { font-size: clamp(56px, 18vw, 96px); }
   .hero::after {
