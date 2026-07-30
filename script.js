@@ -1420,12 +1420,12 @@
      Sized like the station plates — bold set-dressing filling the hero's
      void, layered around the centered copy (which always paints above). */
   var KNOCK_SHOTS = [
-    { src: 'photo-presenting', ww: 480, pos: 'left:3vw;top:9vh',    w: 320, r: -5 },
-    { src: 'photo-msft',       ww: 320, pos: 'right:3vw;top:12vh',  w: 300, r: 4 },
-    { src: 'photo-bte-group',  ww: 320, pos: 'left:7vw;top:48vh',   w: 260, r: 3.5 },
-    { src: 'photo-fab',        ww: 360, pos: 'right:8vw;top:46vh',  w: 280, r: -3 },
-    { src: 'photo-hackathon',  ww: 360, pos: 'left:18vw;top:66vh',  w: 250, r: 2.5 },
-    { src: 'photo-pdce',       ww: 320, pos: 'right:18vw;top:64vh', w: 240, r: -4.5 }
+    { src: 'photo-presenting', ww: 480, pos: 'left:4vw;top:10vh',   w: 320, r: -6.5 },
+    { src: 'photo-msft',       ww: 320, pos: 'right:5vw;top:13vh',  w: 270, r: 4 },
+    { src: 'photo-bte-group',  ww: 320, pos: 'left:7vw;top:42vh',   w: 260, r: 3.5 },
+    { src: 'photo-fab',        ww: 360, pos: 'right:9vw;top:47vh',  w: 280, r: -3 },
+    { src: 'photo-hackathon',  ww: 360, pos: 'left:19vw;top:67vh',  w: 230, r: 2.5 },
+    { src: 'photo-pdce',       ww: 320, pos: 'right:16vw;top:67vh', w: 230, r: -4.5 }
   ];
 
   function knockBuild() {
