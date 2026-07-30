@@ -453,7 +453,7 @@
      stand — so no visitor ever sees a shattered mascot. */
   var GUY_DEBUG = /(?:[?&#])debug\b/.test(location.search + location.hash);
   var SHATTER_PX = 70;                 /* max healthy limb drift, screen px */
-  var guyGuardN = 0, guyFrozen = false, guyMaxDrift = 0;
+  var guyFrozen = false, guyMaxDrift = 0;
 
   function guyDrift() {
     if (!guy) return -1;
@@ -477,8 +477,10 @@
 
   function guyGuard() {
     if (!window.gsap || guyFrozen) return;
-    /* per-frame in debug (catch the exact frame); throttled in production */
-    if (!GUY_DEBUG && (++guyGuardN % 4)) return;
+    /* runs every frame, immediately after guyTick — so a production heal
+       repaints clean in the same frame (invisible). Only active in scene
+       (registered there), and cheap: one style read, and the 9 limb rect
+       reads only while he's actually on screen. */
     var drift = guyDrift();
     if (drift < 0) return;
     if (drift > guyMaxDrift) guyMaxDrift = drift;
@@ -1283,6 +1285,12 @@
     guy.classList.remove('p-stand', 'p-run', 'p-leap', 'waving');
     lastPose = '';
     gsap.ticker.add(guyTick);
+    /* the shatter guard MUST tick right after guyTick (re-added here each
+       build so it stays last even after a rebuild) — that way a heal lands
+       in the SAME frame as the bad pose, before paint, so a shatter can
+       never reach the screen even for one frame. */
+    gsap.ticker.remove(guyGuard);
+    gsap.ticker.add(guyGuard);
 
     /* ghost station numerals: a deeper parallax layer behind the text */
     var ghosts = stations.map(function (st, i) {
@@ -1837,7 +1845,7 @@
       removeEventListener('mousemove', onSceneMouse);
       onSceneMouse = null;
     }
-    if (window.gsap) gsap.ticker.remove(guyTick);
+    if (window.gsap) { gsap.ticker.remove(guyTick); gsap.ticker.remove(guyGuard); }
     killFidget(false);
     if (CHAR.ready) {
       gsap.set(Object.keys(CHAR.el).map(function (k) { return CHAR.el[k]; }),
@@ -2117,10 +2125,10 @@
   if (inScene()) buildScene();
   syncFlowGuy();
 
-  /* the shatter guard rides the global ticker in BOTH modes (it early-outs
-     when the guy is hidden), so it protects the scene rig and the flow
-     poses alike. gsap.ticker runs continuously once gsap is loaded. */
-  if (window.gsap) gsap.ticker.add(guyGuard);
+  /* the shatter guard is registered/removed with the scene rig inside
+     buildScene/killScene (right after guyTick, so it always ticks last).
+     Flow poses are static CSS classes and can't come apart, so they need
+     no guard. */
   if (GUY_DEBUG) window.__guy = { drift: guyDrift, max: function () { return guyMaxDrift; }, heal: healGuy };
 })();
 
